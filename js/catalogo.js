@@ -14,6 +14,13 @@
 (function () {
   "use strict";
 
+  const ES_LABELS = {
+    prematuro: "Prematuro",
+    recien_nacido: "Recién nacido",
+    "3_meses": "3 meses",
+    silicona: "Silicona"
+  };
+
   function activarScrollSuave() {
     const links = document.querySelectorAll('a[href^="#"]');
 
@@ -52,6 +59,9 @@
   }
 
   const grid = document.getElementById("catalogo-grid");
+  const searchInput = document.getElementById("catalogo-search");
+  const categoryFilters = document.getElementById("category-filters");
+  const emptyState = document.getElementById("catalogo-empty");
   const modalOverlay = document.getElementById("modal-overlay");
   const modalClose = document.getElementById("modal-close");
   const modalFormView = document.getElementById("modal-form-view");
@@ -66,22 +76,94 @@
   const btnCerrarExito = document.getElementById("btn-cerrar-exito");
 
   let disenoSeleccionado = null;
+  let categoriaActiva = "todas";
 
-  /* ---------------------------------------------------------
-     1. RENDERIZAR EL CATÁLOGO
-     --------------------------------------------------------- */
+  function normalizarCategoria(categoria) {
+    return categoria
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function getCategoriasDisponibles() {
+    const categorias = new Set();
+    CATALOGO.forEach((diseno) => {
+      (diseno.categorias || []).forEach((categoria) => categorias.add(normalizarCategoria(ES_LABELS[categoria] || categoria)));
+    });
+    return [...categorias].sort();
+  }
+
+  function renderCategoryFilters() {
+    if (!categoryFilters) return;
+
+    const categorias = ["todas", ...getCategoriasDisponibles()];
+    categoryFilters.innerHTML = categorias.map((categoria) => {
+      const label = categoria === "todas" ? "Todas" : (ES_LABELS[categoria] || categoria.replace(/_/g, " "));
+      const activeClass = categoria === categoriaActiva ? "is-active" : "";
+      return `<button type="button" class="filter-chip ${activeClass}" data-category="${categoria}">${label}</button>`;
+    }).join("");
+
+    categoryFilters.querySelectorAll(".filter-chip").forEach((button) => {
+      button.addEventListener("click", () => {
+        categoriaActiva = button.dataset.category;
+        renderCatalogo();
+      });
+    });
+  }
+
+  function filtrarCatalogo() {
+    const valorBusqueda = (searchInput ? searchInput.value : "").trim().toLowerCase();
+
+    return CATALOGO.filter((diseno) => {
+      const categorias = (diseno.categorias || []).map((categoria) => normalizarCategoria(ES_LABELS[categoria] || categoria));
+      const coincideCategoria = categoriaActiva === "todas" || categorias.includes(categoriaActiva);
+
+      if (!coincideCategoria) return false;
+
+      if (!valorBusqueda) return true;
+
+      const textoBusqueda = [
+        diseno.nombre,
+        diseno.subtitulo,
+        diseno.material,
+        diseno.descripcion,
+        ...(diseno.categorias || []).map((categoria) => ES_LABELS[categoria] || categoria)
+      ].join(" ").toLowerCase();
+
+      return textoBusqueda.includes(valorBusqueda);
+    });
+  }
+
   function renderCatalogo() {
+    if (!grid) return;
+
+    renderCategoryFilters();
+    const productos = filtrarCatalogo();
     grid.innerHTML = "";
 
-    CATALOGO.forEach((diseno) => {
+    if (productos.length === 0) {
+      emptyState.hidden = false;
+      return;
+    }
+
+    emptyState.hidden = true;
+
+    productos.forEach((diseno) => {
       const tarjeta = document.createElement("div");
       tarjeta.className = "tarjeta";
+
+      const categoriasHtml = (diseno.categorias || []).map((categoria) => {
+        const label = ES_LABELS[categoria] || categoria.replace(/_/g, " ");
+        return `<span class="product-badge">${label}</span>`;
+      }).join("");
 
       tarjeta.innerHTML = `
         <div class="tarjeta-imagen-wrap">
           <span class="badge ${diseno.disponible ? "" : "apartado"}">
             ${diseno.disponible ? "Disponible" : "Apartado"}
           </span>
+          <div class="tarjeta-badges">${categoriasHtml}</div>
           <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" loading="lazy">
         </div>
         <div class="tarjeta-info">
@@ -103,13 +185,16 @@
       grid.appendChild(tarjeta);
     });
 
-    // Enlazar los botones "Apartar" recién creados
     document.querySelectorAll(".btn-apartar").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = Number(btn.getAttribute("data-id"));
         abrirModal(id);
       });
     });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener("input", renderCatalogo);
   }
 
   /* ---------------------------------------------------------

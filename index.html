@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Maternity Reborn | Bebés reborn hechos a mano</title>
+<title>Maternity Reborn Dolls | Bebés reborn hechos a mano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -18,7 +18,10 @@
   <!-- ===== NAV ===== -->
   <nav class="navbar" id="inicio">
     <div class="navbar-inner">
-      <a class="nav-logo" href="#inicio">Maternity Reborn<sup>®</sup></a>
+      <a class="nav-logo" href="#inicio" aria-label="Maternity Reborn Dolls">
+        <img src="img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <span>Maternity Reborn</span>
+      </a>
       <div class="nav-links">
         <a href="#coleccion">Colección</a>
         <a href="#como-funciona">El proceso</a>
@@ -33,6 +36,7 @@
     <div class="hero-inner">
       <div class="hero-copy">
         <p class="eyebrow eyebrow-light"><i></i>Hecho a mano en México · Piezas únicas</p>
+        <p class="hero-slogan">baby forever</p>
         <h1 class="hero-title">Un recién nacido<br>que no crece,<br><em>pero siempre acompaña.</em></h1>
         <p class="hero-subtitle">
           Bebés reborn esculpidos, pintados capa por capa y pesados a mano.
@@ -85,12 +89,28 @@
     </div>
   </section>
 
+  
+
   <!-- ===== CATÁLOGO ===== -->
   <main class="catalogo-wrapper" id="catalogo">
     <div class="catalogo-heading">
       <div><p class="eyebrow"><i></i>Catálogo abierto</p><h2>Bebés disponibles</h2></div>
       <p>Lo que ves es lo que hay. Cuando una pieza se adopta, se marca y no se vuelve a repetir.</p>
     </div>
+
+    <div class="catalogo-toolbar" aria-label="Búsqueda y filtros del catálogo">
+      <label class="search-field" for="catalogo-search">
+        <span class="search-label">Buscar bebé</span>
+        <input id="catalogo-search" type="search" placeholder="Buscar por nombre, categoría o material" autocomplete="off">
+      </label>
+
+      <div class="category-filters" id="category-filters" aria-label="Filtrar por categoría"></div>
+    </div>
+
+    <div id="catalogo-empty" class="catalogo-empty" hidden>
+      No encontramos bebés con ese nombre, probá con otra búsqueda.
+    </div>
+
     <div id="catalogo-grid" class="catalogo-grid">
       <!-- Las tarjetas se generan automáticamente desde js/datos.js -->
     </div>
@@ -149,7 +169,7 @@
   </div>
 
   <footer class="site-footer">
-    <p class="footer-logo">Maternity Reborn<sup>®</sup></p>
+    <p class="footer-logo"><img src="img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo"></p>
     <p>&copy; <span id="anio-actual"></span> Maternity Reborn. Piezas de colección para mayores de 14 años.</p>
   </footer>
 
