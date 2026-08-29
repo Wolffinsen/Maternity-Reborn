@@ -14,6 +14,43 @@
 (function () {
   "use strict";
 
+  function activarScrollSuave() {
+    const links = document.querySelectorAll('a[href^="#"]');
+
+    links.forEach((link) => {
+      link.addEventListener("click", (event) => {
+        const targetId = link.getAttribute("href");
+        if (!targetId || targetId === "#") return;
+
+        const target = document.querySelector(targetId);
+        if (!target) return;
+
+        event.preventDefault();
+
+        const top = target.getBoundingClientRect().top + window.scrollY - 90;
+        const start = window.scrollY;
+        const distance = top - start;
+        const duration = 700;
+        const startTime = performance.now();
+
+        function paso(timestamp) {
+          const progress = Math.min((timestamp - startTime) / duration, 1);
+          const eased = 1 - Math.pow(1 - progress, 3);
+          window.scrollTo({ top: start + distance * eased, behavior: "auto" });
+
+          if (progress < 1) {
+            requestAnimationFrame(paso);
+          } else {
+            window.scrollTo({ top, behavior: "auto" });
+            history.pushState(null, "", targetId);
+          }
+        }
+
+        requestAnimationFrame(paso);
+      });
+    });
+  }
+
   const grid = document.getElementById("catalogo-grid");
   const modalOverlay = document.getElementById("modal-overlay");
   const modalClose = document.getElementById("modal-close");
@@ -221,5 +258,6 @@
      INICIAR
      --------------------------------------------------------- */
   document.getElementById("anio-actual").textContent = new Date().getFullYear();
+  activarScrollSuave();
   renderCatalogo();
 })();
