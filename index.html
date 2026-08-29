@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Maternity Reborn | Bebés reborn hechos a mano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+  <div class="announcement" role="status">
+    <p><strong>Novedad</strong><span>Separa tu bebé con un anticipo de $200 MXN</span><a href="#catalogo">Ver piezas disponibles <span aria-hidden="true">↗</span></a></p>
+  </div>
+
+  <!-- ===== NAV ===== -->
+  <nav class="navbar" id="inicio">
+    <div class="navbar-inner">
+      <a class="nav-logo" href="#inicio">Maternity Reborn<sup>®</sup></a>
+      <div class="nav-links">
+        <a href="#coleccion">Colección</a>
+        <a href="#como-funciona">El proceso</a>
+        <a href="#catalogo">Catálogo</a>
+      </div>
+      <a href="#catalogo" class="nav-cta">Ver catálogo <span aria-hidden="true">↗</span></a>
+    </div>
+  </nav>
+
+  <!-- ===== HERO ===== -->
+  <header class="hero" id="coleccion">
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow eyebrow-light"><i></i>Hecho a mano en México · Piezas únicas</p>
+        <h1 class="hero-title">Un recién nacido<br>que no crece,<br><em>pero siempre acompaña.</em></h1>
+        <p class="hero-subtitle">
+          Bebés reborn esculpidos, pintados capa por capa y pesados a mano.
+          Cada pieza sale del atelier numerada y con su certificado de nacimiento.
+        </p>
+        <div class="hero-actions">
+          <a href="#catalogo" class="btn-hero">Ver el catálogo <span aria-hidden="true">↗</span></a>
+          <a href="#como-funciona" class="btn-hero btn-hero-ghost">Conoce el proceso</a>
+        </div>
+      </div>
+
+      <div class="hero-figure">
+        <div class="hero-photo-frame">
+          <img src="img/diseno-1.jpg" alt="Bebé destacado del catálogo" class="hero-photo">
+        </div>
+        <div class="price-badge">
+          <span class="price-badge-label">Desde</span>
+          <span class="price-badge-amount">$780 MXN</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="ticker" aria-hidden="true"><div class="ticker-track">
+    <span>40 capas de pintura</span><i>/</i><span>Vinilo de grado médico</span><i>/</i>
+    <span>Mohair implantado hebra por hebra</span><i>/</i><span>Peso real y tacto suave</span><i>/</i>
+    <span>Certificado de nacimiento</span><i>/</i><span>40 capas de pintura</span><i>/</i>
+    <span>Vinilo de grado médico</span><i>/</i><span>Mohair implantado hebra por hebra</span><i>/</i>
+    <span>Peso real y tacto suave</span><i>/</i><span>Certificado de nacimiento</span><i>/</i>
+  </div></div>
+
+  <!-- ===== CÓMO FUNCIONA ===== -->
+  <section class="how-it-works" id="como-funciona">
+    <div class="section-intro">
+      <p class="eyebrow"><i></i>El proceso</p>
+      <h2>Cuatro naturalezas.<br><em>Un mismo oficio.</em></h2>
+      <p>Cambian la talla, la postura y el acabado. No cambia el cuidado con el que se trabaja cada pieza.</p>
+    </div>
+    <div class="how-item">
+      <span class="how-num">1</span>
+      <p><strong>Elige tu diseño</strong> favorito del catálogo</p>
+    </div>
+    <div class="how-item">
+      <span class="how-num">2</span>
+      <p><strong>Completa tus datos</strong> para iniciar el apartado</p>
+    </div>
+    <div class="how-item">
+      <span class="how-num">3</span>
+      <p><strong>Confirmamos por WhatsApp</strong> y recibes tu folio</p>
+    </div>
+  </section>
+
+  <!-- ===== CATÁLOGO ===== -->
+  <main class="catalogo-wrapper" id="catalogo">
+    <div class="catalogo-heading">
+      <div><p class="eyebrow"><i></i>Catálogo abierto</p><h2>Bebés disponibles</h2></div>
+      <p>Lo que ves es lo que hay. Cuando una pieza se adopta, se marca y no se vuelve a repetir.</p>
+    </div>
+    <div id="catalogo-grid" class="catalogo-grid">
+      <!-- Las tarjetas se generan automáticamente desde js/datos.js -->
+    </div>
+  </main>
+
+  <section class="atelier-band">
+    <div class="atelier-image"><img src="img/diseno-4.jpg" alt="Detalle de un bebé reborn terminado"></div>
+    <div class="atelier-copy"><p class="eyebrow"><i></i>Desde el atelier</p><h2>Porque cada bebé<br><em>lleva una firma.</em></h2>
+      <p>Trabajamos tres piezas a la vez, con lista de espera abierta y atención personal durante todo el proceso.</p>
+      <a href="#catalogo" class="text-link">Conoce las piezas <span aria-hidden="true">↗</span></a>
+    </div>
+  </section>
+
+  <!-- ===== MODAL DE APARTADO ===== -->
+  <div id="modal-overlay" class="modal-overlay" hidden>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button type="button" class="modal-close" id="modal-close" aria-label="Cerrar">&times;</button>
+
+      <div id="modal-form-view">
+        <p class="eyebrow">Vas a apartar a</p>
+        <h2 class="modal-title" id="modal-title">—</h2>
+        <p class="modal-price" id="modal-price">—</p>
+
+        <form id="form-apartado">
+          <label class="field-label" for="input-nombre">Tu nombre</label>
+          <input class="field-input" type="text" id="input-nombre" required placeholder="Ej. María López">
+
+          <label class="field-label" for="input-telefono">Tu WhatsApp</label>
+          <input class="field-input" type="tel" id="input-telefono" required placeholder="Ej. 6699999999">
+
+          <p class="modal-note">
+            El apartado tiene un costo de <strong>$200 MXN</strong>, vía transferencia o en efectivo
+            en tienda física. Al continuar se abrirá WhatsApp con tu mensaje listo para enviar.
+          </p>
+
+          <button type="submit" class="btn-primary" id="btn-confirmar">
+            Continuar a WhatsApp
+          </button>
+        </form>
+      </div>
+
+      <div id="modal-success-view" hidden>
+        <p class="eyebrow">¡Todo listo!</p>
+        <h2 class="modal-title">Tu folio es</h2>
+        <p class="folio-display" id="folio-display">—</p>
+        <p class="modal-note">
+          Guarda este folio. Se abrió (o se abrirá) WhatsApp con tu mensaje de apartado —
+          solo confírmalo para que quede registrado.
+        </p>
+        <a href="#" target="_blank" class="btn-primary" id="btn-abrir-whatsapp">
+          Abrir WhatsApp
+        </a>
+        <button type="button" class="btn-secondary" id="btn-cerrar-exito">Cerrar</button>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p class="footer-logo">Maternity Reborn<sup>®</sup></p>
+    <p>&copy; <span id="anio-actual"></span> Maternity Reborn. Piezas de colección para mayores de 14 años.</p>
+  </footer>
+
+  <script src="js/datos.js"></script>
+  <script src="js/catalogo.js"></script>
+</body>
+</html>
