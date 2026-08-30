@@ -7,19 +7,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/styles.css">
+<link rel="icon" type="image/png" href="assets/img/logotipo%20transparente.png">
+<link rel="stylesheet" href="assets/css/styles.css">
 </head>
 <body>
 
   <div class="announcement" role="status">
-    <p><strong>Novedad</strong><span>Separa tu bebé con un anticipo de $200 MXN</span><a href="#catalogo">Ver piezas disponibles <span aria-hidden="true">↗</span></a></p>
+    <p><strong>Novedad</strong><span>Separa tu bebé con un anticipo de $200 MXN</span><a href="#catalogo">Ver piezas disponibles <span class="arrow-icon" aria-hidden="true"></span></a></p>
   </div>
 
   <!-- ===== NAV ===== -->
   <nav class="navbar" id="inicio">
     <div class="navbar-inner">
       <a class="nav-logo" href="#inicio" aria-label="Maternity Reborn Dolls">
-        <img src="img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
         <span>Maternity Reborn</span>
       </a>
       <div class="nav-links">
@@ -27,7 +28,7 @@
         <a href="#como-funciona">El proceso</a>
         <a href="#catalogo">Catálogo</a>
       </div>
-      <a href="#catalogo" class="nav-cta">Ver catálogo <span aria-hidden="true">↗</span></a>
+      <a href="#catalogo" class="nav-cta">Ver catálogo <span class="arrow-icon" aria-hidden="true"></span></a>
     </div>
   </nav>
 
@@ -35,22 +36,16 @@
   <header class="hero" id="coleccion">
     <div class="hero-inner">
       <div class="hero-copy">
-        <p class="eyebrow eyebrow-light"><i></i>Hecho a mano en México · Piezas únicas</p>
-        <p class="hero-slogan">baby forever</p>
         <h1 class="hero-title">Un recién nacido<br>que no crece,<br><em>pero siempre acompaña.</em></h1>
-        <p class="hero-subtitle">
-          Bebés reborn esculpidos, pintados capa por capa y pesados a mano.
-          Cada pieza sale del atelier numerada y con su certificado de nacimiento.
-        </p>
         <div class="hero-actions">
-          <a href="#catalogo" class="btn-hero">Ver el catálogo <span aria-hidden="true">↗</span></a>
+          <a href="#catalogo" class="btn-hero">Ver el catálogo <span class="arrow-icon" aria-hidden="true"></span></a>
           <a href="#como-funciona" class="btn-hero btn-hero-ghost">Conoce el proceso</a>
         </div>
       </div>
 
       <div class="hero-figure">
         <div class="hero-photo-frame">
-          <img src="img/diseno-1.jpg" alt="Bebé destacado del catálogo" class="hero-photo">
+          <img src="assets/img/diseno-1.jpg" alt="Bebé destacado del catálogo" class="hero-photo">
         </div>
         <div class="price-badge">
           <span class="price-badge-label">Desde</span>
@@ -95,7 +90,6 @@
   <main class="catalogo-wrapper" id="catalogo">
     <div class="catalogo-heading">
       <div><p class="eyebrow"><i></i>Catálogo abierto</p><h2>Bebés disponibles</h2></div>
-      <p>Lo que ves es lo que hay. Cuando una pieza se adopta, se marca y no se vuelve a repetir.</p>
     </div>
 
     <div class="catalogo-toolbar" aria-label="Búsqueda y filtros del catálogo">
@@ -108,19 +102,19 @@
     </div>
 
     <div id="catalogo-empty" class="catalogo-empty" hidden>
-      No encontramos bebés con ese nombre, probá con otra búsqueda.
+      No encontramos bebés con ese nombre, prueba con otra búsqueda.
     </div>
 
     <div id="catalogo-grid" class="catalogo-grid">
-      <!-- Las tarjetas se generan automáticamente desde js/datos.js -->
+      <!-- Las tarjetas se generan automáticamente desde assets/js/datos.js -->
     </div>
   </main>
 
   <section class="atelier-band">
-    <div class="atelier-image"><img src="img/diseno-4.jpg" alt="Detalle de un bebé reborn terminado"></div>
+    <div class="atelier-image"><img src="assets/img/diseno-4.jpg" alt="Detalle de un bebé reborn terminado"></div>
     <div class="atelier-copy"><p class="eyebrow"><i></i>Desde el atelier</p><h2>Porque cada bebé<br><em>lleva una firma.</em></h2>
       <p>Trabajamos tres piezas a la vez, con lista de espera abierta y atención personal durante todo el proceso.</p>
-      <a href="#catalogo" class="text-link">Conoce las piezas <span aria-hidden="true">↗</span></a>
+      <a href="#catalogo" class="text-link">Conoce las piezas <span class="arrow-icon" aria-hidden="true"></span></a>
     </div>
   </section>
 
@@ -169,11 +163,28 @@
   </div>
 
   <footer class="site-footer">
-    <p class="footer-logo"><img src="img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo"></p>
+    <div class="footer-brand-row">
+      <div class="footer-brand">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <span>Maternity Reborn</span>
+      </div>
+
+      <div class="footer-socials" aria-label="Redes sociales">
+        <a href="https://instagram.com" target="_blank" rel="noreferrer" aria-label="Instagram">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5zm0 2a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3V7a3 3 0 0 0-3-3H7zm5 3.5A5.5 5.5 0 1 1 6.5 13 5.5 5.5 0 0 1 12 7.5zm0 2A3.5 3.5 0 1 0 15.5 13 3.5 3.5 0 0 0 12 9.5zm5.25-3.25a1.25 1.25 0 1 1-1.25 1.25 1.25 1.25 0 0 1 1.25-1.25z"/></svg>
+        </a>
+        <a href="https://facebook.com" target="_blank" rel="noreferrer" aria-label="Facebook">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13.5 22v-8h2.7l.4-3h-3.1V7.5c0-.9.3-1.5 1.6-1.5H17V3.1c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3V11H8v3h2.3v8h3.2z"/></svg>
+        </a>
+        <a href="https://wa.me/5210000000000" target="_blank" rel="noreferrer" aria-label="WhatsApp">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.1 4.9A9.7 9.7 0 0 0 12 2a9.9 9.9 0 0 0-8.7 15L2 22l5.3-1.4A9.9 9.9 0 1 0 19.1 4.9zm-7.1 14.6c-1.5 0-3-.4-4.3-1.1l-.3-.2-3.1.8.8-3-.2-.3A8.1 8.1 0 0 1 12 4a8.1 8.1 0 1 1 0 16.2zm4.5-6.1c-.2-.1-1.4-.7-1.6-.8s-.4-.1-.6.1-.7.8-.9 1-.4.1-.7-.1a6.7 6.7 0 0 1-1.9-1.2 7.4 7.4 0 0 1-1.4-1.7c-.1-.2 0-.4.1-.5l.2-.2c.1-.1.2-.2.3-.4.1-.1.1-.3 0-.4l-.1-.3c0-.1-.5-1.3-.7-1.8-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.6.3-.2.2-.8.8-.8 1.9s.8 2.1.9 2.3c.1.2 1.6 2.5 3.9 3.5.5.2.9.3 1.2.4.5.2.9.2 1.2.1.4-.1 1.4-.6 1.6-1.2.2-.6.2-1 .1-1.2-.1-.2-.2-.2-.4-.3z"/></svg>
+        </a>
+      </div>
+    </div>
     <p>&copy; <span id="anio-actual"></span> Maternity Reborn. Piezas de colección para mayores de 14 años.</p>
   </footer>
 
-  <script src="js/datos.js"></script>
-  <script src="js/catalogo.js"></script>
+  <script src="assets/js/datos.js"></script>
+  <script src="assets/js/catalogo.js"></script>
 </body>
 </html>

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Panel administrativo | Maternity Reborn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="icon" type="image/png" href="assets/img/logotipo%20transparente.png">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body class="admin-page">
+  <nav class="navbar admin-navbar">
+    <div class="navbar-inner">
+      <a class="nav-logo" href="index.html" aria-label="Maternity Reborn Dolls">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <span>Maternity Reborn</span>
+      </a>
+      <a class="nav-cta" href="index.html">Volver al sitio</a>
+    </div>
+  </nav>
+
+  <main class="admin-main">
+    <section class="admin-guard" id="admin-guard">
+      <div class="admin-card">
+        <p class="eyebrow"><i></i>Acceso privado</p>
+        <h1>Panel administrativo</h1>
+        <label class="field-label" for="admin-secret">Código secreto</label>
+        <div class="password-input-wrap">
+          <input class="field-input" id="admin-secret" type="password" placeholder="Ingresa el código" autocomplete="current-password">
+          <button class="password-toggle" type="button" data-password-target="admin-secret" aria-label="Mostrar contraseña">Mostrar</button>
+        </div>
+        <button class="btn-primary" id="btn-admin-access" type="button">Entrar</button>
+        <p class="admin-error" id="admin-error" role="alert" hidden>La contraseña es incorrecta.</p>
+      </div>
+    </section>
+
+    <section class="admin-dashboard" id="admin-dashboard" hidden>
+      <div class="admin-header">
+        <div>
+          <p class="eyebrow"><i></i>Resumen</p>
+          <h2>Ventas y apartados</h2>
+        </div>
+        <button class="btn-secondary" id="btn-admin-logout" type="button">Cerrar sesión</button>
+      </div>
+
+      <div class="stats-grid">
+        <article class="stat-card">
+          <span>Total vendidos</span>
+          <strong id="stat-vendidos">0</strong>
+        </article>
+        <article class="stat-card">
+          <span>Folios activos</span>
+          <strong id="stat-activos">0</strong>
+        </article>
+        <article class="stat-card">
+          <span>Ingresos</span>
+          <strong id="stat-ingresos">$0 MXN</strong>
+        </article>
+        <article class="stat-card">
+          <span>Último folio</span>
+          <strong id="stat-ultimo">—</strong>
+        </article>
+      </div>
+
+      <div class="admin-panel">
+        <div class="panel-heading">
+          <h3>Folio / apartados</h3>
+        </div>
+        <div class="admin-search-field">
+          <label class="search-label" for="admin-client-search">Buscar cliente</label>
+          <input class="field-input" id="admin-client-search" type="search" placeholder="Nombre, folio o diseño">
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Folio</th>
+                <th>Cliente</th>
+                <th>Diseño</th>
+                <th>Precio</th>
+                <th>Estado</th>
+                <th>Fecha</th>
+                <th>Actualizar</th>
+              </tr>
+            </thead>
+            <tbody id="admin-table-body">
+              <tr>
+                <td colspan="6" class="table-empty">Cargando datos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="admin-panel admin-password-panel">
+        <div class="panel-heading">
+          <h3>Cambiar contraseña</h3>
+        </div>
+        <form id="change-password-form" class="admin-password-form">
+          <div>
+            <label class="field-label" for="current-password">Contraseña actual</label>
+            <div class="password-input-wrap">
+              <input class="field-input" id="current-password" type="password" autocomplete="current-password" required>
+              <button class="password-toggle" type="button" data-password-target="current-password" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="new-password">Nueva contraseña</label>
+            <div class="password-input-wrap">
+              <input class="field-input" id="new-password" type="password" autocomplete="new-password" minlength="8" required>
+              <button class="password-toggle" type="button" data-password-target="new-password" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
+          </div>
+          <div>
+            <label class="field-label" for="confirm-password">Confirmar contraseña</label>
+            <div class="password-input-wrap">
+              <input class="field-input" id="confirm-password" type="password" autocomplete="new-password" minlength="8" required>
+              <button class="password-toggle" type="button" data-password-target="confirm-password" aria-label="Mostrar contraseña">Mostrar</button>
+            </div>
+          </div>
+          <button class="btn-primary" type="submit">Guardar nueva contraseña</button>
+          <p class="admin-error" id="password-change-message" role="status" hidden></p>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <script src="assets/js/datos.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>
