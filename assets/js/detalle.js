@@ -10,7 +10,8 @@ const CATEGORY_LABELS = {
   prematuro: "Prematuro",
   recien_nacido: "Recién nacido",
   "3_meses": "3 meses",
-  silicona: "Silicona"
+  silicona: "Silicona",
+  silicona_premium: "Silicona premium"
 };
 
 function mostrarFoto(src, alt) {
@@ -22,21 +23,25 @@ function mostrarFoto(src, alt) {
 }
 
 function cargarDetalle() {
+  const precio = Number(bebe.precio ?? 0);
+
   document.title = `${bebe.nombre} | Maternity Reborn`;
   document.getElementById("detail-status").textContent = bebe.disponible ? "Disponible" : "Adoptado";
   document.getElementById("detail-code").textContent = `Diseño Nº ${String(bebe.id).padStart(2, "0")}`;
   document.getElementById("detail-name").textContent = bebe.nombre;
   document.getElementById("detail-sub").textContent = bebe.subtitulo;
-  document.getElementById("detail-price").textContent = `$${bebe.precio.toLocaleString("es-MX")} MXN`;
+  document.getElementById("detail-price").textContent = `$${precio.toLocaleString("es-MX")} MXN`;
 
   const badges = document.getElementById("detail-badges");
   badges.innerHTML = (bebe.categorias || []).map((categoria) => `<span class="detail-badge">${CATEGORY_LABELS[categoria] || categoria}</span>`).join("");
+
+  const incluyeTexto = Array.isArray(bebe.incluye) ? bebe.incluye.join(", ") : (bebe.incluye || "Incluye certificado de autenticidad.");
 
   document.getElementById("detail-specs").innerHTML = [
     ["Talla y peso", bebe.talla],
     ["Material", bebe.material],
     ["Cabello", bebe.cabello],
-    ["Incluye", bebe.incluye]
+    ["Incluye", incluyeTexto]
   ].map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join("");
 
   const certificacion = document.getElementById("detail-certificacion");
