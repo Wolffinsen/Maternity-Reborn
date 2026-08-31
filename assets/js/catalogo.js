@@ -136,44 +136,74 @@
     });
   }
 
+  function agruparPorPersonaje(productos) {
+    const grupos = new Map();
+
+    productos.forEach((diseno) => {
+      if (!grupos.has(diseno.nombre)) {
+        grupos.set(diseno.nombre, []);
+      }
+      grupos.get(diseno.nombre).push(diseno);
+    });
+
+    return [...grupos.values()].map((grupo) => ({
+      nombre: grupo[0].nombre,
+      precio: Number((grupo[0].precio ?? 0)),
+      imagen: grupo[0].imagen,
+      disponible: grupo.some((item) => item.disponible),
+      categoria: (grupo[0].categorias || [])[0] || "recien_nacido",
+      subtitulo: grupo[0].subtitulo,
+      variantes: grupo,
+      totalVariantes: grupo.length,
+      slug: grupo[0].slug
+    }));
+  }
+
   function renderCatalogo() {
     if (!grid) return;
 
     renderCategoryFilters();
     const productos = filtrarCatalogo();
+    const grupos = agruparPorPersonaje(productos);
     grid.innerHTML = "";
 
-    if (productos.length === 0) {
+    if (grupos.length === 0) {
       emptyState.hidden = false;
       return;
     }
 
     emptyState.hidden = true;
 
-    productos.forEach((diseno) => {
+    grupos.forEach((grupo) => {
+      const diseno = grupo.variantes[0];
       const tarjeta = document.createElement("div");
       tarjeta.className = "tarjeta";
 
-      const precioNumero = Number(diseno.precio ?? 0);
+      const precioNumero = Number(grupo.precio ?? 0);
       const paletteClass = ["palette-rose", "palette-green", "palette-cream", "palette-gold"][((Number(diseno.id) - 1) % 4)];
       const categoriasHtml = (diseno.categorias || []).map((categoria) => {
         const label = ES_LABELS[categoria] || categoria.replace(/_/g, " ");
         return `<span class="product-badge">${label}</span>`;
       }).join("");
 
+      const labelVariantes = grupo.totalVariantes > 1 ? `${grupo.totalVariantes} diseños` : "1 diseño";
+      const subtituloGrupo = grupo.variantes.length > 1
+        ? `${labelVariantes} · ${ES_LABELS[grupo.categoria] || grupo.categoria.replace(/_/g, " ")}`
+        : (diseno.subtitulo || "Pieza única hecha a mano");
+
       tarjeta.innerHTML = `
         <div class="tarjeta-imagen-wrap ${paletteClass}">
-          <span class="badge ${diseno.disponible ? "" : "apartado"}">
-            ${diseno.disponible ? "Disponible" : "Apartado"}
+          <span class="badge ${grupo.disponible ? "" : "apartado"}">
+            ${grupo.disponible ? "Disponible" : "Apartado"}
           </span>
           <div class="tarjeta-badges">${categoriasHtml}</div>
           <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
         </div>
         <div class="tarjeta-info">
           <h3 class="tarjeta-nombre">${diseno.nombre}</h3>
-          <p class="tarjeta-sub">${diseno.subtitulo || "Pieza única hecha a mano"}</p>
+          <p class="tarjeta-sub">${subtituloGrupo}</p>
           <p class="tarjeta-precio">$${precioNumero.toLocaleString("es-MX")} MXN</p>
-          <a class="btn-detalle" href="detalle.html?id=${diseno.id}">Ver características</a>
+          <a class="btn-detalle" href="detalle.html?modelo=${encodeURIComponent(diseno.nombre)}">Ver diseños</a>
           <button
             type="button"
             class="btn-apartar"
