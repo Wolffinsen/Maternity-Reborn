@@ -81,12 +81,34 @@ function mostrarFoto(src, alt) {
   }
 }
 
-function ocultarSeleccionesDetalle() {
-  if (thumbs) {
+function renderThumbs(fotos) {
+  if (!thumbs) return;
+
+  const fotosUnicas = Array.from(new Set((fotos || []).filter(Boolean)));
+  if (!fotosUnicas.length) {
     thumbs.innerHTML = "";
     thumbs.style.display = "none";
+    return;
   }
 
+  thumbs.innerHTML = fotosUnicas.map((src, index) => `
+    <button
+      type="button"
+      class="detail-thumb"
+      data-src="${src}"
+      aria-label="Ver foto ${index + 1} del diseño"
+    >
+      <img src="${src}" alt="Detalle del diseño ${index + 1}" loading="lazy">
+    </button>
+  `).join("");
+
+  thumbs.style.display = "grid";
+  thumbs.querySelectorAll("button").forEach((button) => {
+    button.addEventListener("click", () => mostrarFoto(button.dataset.src, `Bebé reborn ${bebe?.nombre || "diseño"}`));
+  });
+}
+
+function ocultarSeleccionesDetalle() {
   const wrapVariantes = document.querySelector(".detail-variants-wrap");
   if (wrapVariantes) {
     wrapVariantes.style.display = "none";
@@ -156,8 +178,11 @@ function renderVariantCards(variantesDisponibles, activeId) {
 function cargarDetalle() {
   ocultarSeleccionesDetalle();
 
-  const imagenInicial = (bebe.fotos || [bebe.imagen])[0] || bebe.imagen;
+  const fotos = (bebe.fotos || [bebe.imagen] || []).filter(Boolean);
+  const imagenInicial = fotos[0] || bebe.imagen;
+
   actualizarDetalles(bebe);
+  renderThumbs(fotos);
   mostrarFoto(imagenInicial, `Bebé reborn ${bebe.nombre}`);
 }
 

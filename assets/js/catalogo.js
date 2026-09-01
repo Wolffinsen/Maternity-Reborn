@@ -76,6 +76,37 @@
   const btnAbrirWhatsapp = document.getElementById("btn-abrir-whatsapp");
   const btnCerrarExito = document.getElementById("btn-cerrar-exito");
 
+  function mostrarToastAnticipo() {
+    if (document.getElementById("anticipo-toast")) return;
+
+    const toast = document.createElement("div");
+    toast.id = "anticipo-toast";
+    toast.className = "anticipo-toast";
+    toast.setAttribute("role", "status");
+    toast.setAttribute("aria-live", "polite");
+    toast.innerHTML = `
+      <div class="anticipo-toast__content">
+        <strong>Anticipo</strong>
+        <p>Puedes apartar tu bebé con un anticipo de $200 MXN</p>
+        <a href="#catalogo">Ver catálogo</a>
+      </div>
+      <button type="button" class="anticipo-toast__close" aria-label="Cerrar aviso">&times;</button>
+    `;
+
+    document.body.appendChild(toast);
+
+    const cerrarToast = toast.querySelector(".anticipo-toast__close");
+    cerrarToast.addEventListener("click", () => {
+      toast.classList.remove("is-visible");
+    });
+
+    requestAnimationFrame(() => toast.classList.add("is-visible"));
+
+    setTimeout(() => {
+      toast.classList.remove("is-visible");
+    }, 6500);
+  }
+
   let disenoSeleccionado = null;
   let categoriaActiva = "todas";
 
@@ -376,6 +407,7 @@
      INICIAR
      --------------------------------------------------------- */
   document.getElementById("anio-actual").textContent = new Date().getFullYear();
+  mostrarToastAnticipo();
   activarScrollSuave();
   renderCatalogo();
 })();
