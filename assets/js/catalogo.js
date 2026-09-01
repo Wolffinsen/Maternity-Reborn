@@ -90,7 +90,7 @@
         <p>Puedes apartar tu bebé con un anticipo de $200 MXN</p>
         <a href="#catalogo">Ver catálogo</a>
       </div>
-      <button type="button" class="anticipo-toast__close" aria-label="Cerrar aviso">&times;</button>
+      <button type="button" class="anticipo-toast__close" aria-label="Cerrar aviso">Entendido</button>
     `;
 
     document.body.appendChild(toast);
@@ -101,10 +101,6 @@
     });
 
     requestAnimationFrame(() => toast.classList.add("is-visible"));
-
-    setTimeout(() => {
-      toast.classList.remove("is-visible");
-    }, 6500);
   }
 
   let disenoSeleccionado = null;
@@ -171,10 +167,11 @@
     const grupos = new Map();
 
     productos.forEach((diseno) => {
-      if (!grupos.has(diseno.nombre)) {
-        grupos.set(diseno.nombre, []);
+      const key = `${diseno.nombre}-${diseno.categorias?.[0] || "general"}`;
+      if (!grupos.has(key)) {
+        grupos.set(key, []);
       }
-      grupos.get(diseno.nombre).push(diseno);
+      grupos.get(key).push(diseno);
     });
 
     return [...grupos.values()].map((grupo) => ({
@@ -217,6 +214,11 @@
         return `<span class="product-badge">${label}</span>`;
       }).join("");
 
+      const hasNewBadge = Boolean(diseno.esNuevo || grupo.variantes.some((item) => item.esNuevo));
+      const badgeMarkup = hasNewBadge
+        ? '<span class="badge nuevo">Nuevo</span>'
+        : `<span class="badge ${grupo.disponible ? "" : "apartado"}">${grupo.disponible ? "Disponible" : "Apartado"}</span>`;
+
       const labelVariantes = grupo.totalVariantes > 1 ? `${grupo.totalVariantes} diseños` : "1 diseño";
       const subtituloGrupo = grupo.variantes.length > 1
         ? `${labelVariantes} · ${ES_LABELS[grupo.categoria] || grupo.categoria.replace(/_/g, " ")}`
@@ -224,36 +226,67 @@
 
       tarjeta.innerHTML = `
         <div class="tarjeta-imagen-wrap ${paletteClass}">
-          <span class="badge ${grupo.disponible ? "" : "apartado"}">
-            ${grupo.disponible ? "Disponible" : "Apartado"}
-          </span>
+          ${badgeMarkup}
           <div class="tarjeta-badges">${categoriasHtml}</div>
-          <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
+          <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" loading="lazy" data-lightbox="true" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
         </div>
         <div class="tarjeta-info">
           <h3 class="tarjeta-nombre">${diseno.nombre}</h3>
           <p class="tarjeta-sub">${subtituloGrupo}</p>
           <p class="tarjeta-precio">$${precioNumero.toLocaleString("es-MX")} MXN</p>
-          <a class="btn-detalle" href="detalle.html?modelo=${encodeURIComponent(diseno.nombre)}">Ver diseños</a>
-          <button
-            type="button"
-            class="btn-apartar"
-            data-id="${diseno.id}"
-            ${diseno.disponible ? "" : "disabled"}
-          >
-            ${diseno.disponible ? "Apartar este bebé" : "Ya apartado"}
-          </button>
+          <a class="btn-detalle" href="detalle.html?modelo=${encodeURIComponent(grupo.slug)}">Ver diseños</a>
         </div>
       `;
 
       grid.appendChild(tarjeta);
     });
 
-    document.querySelectorAll(".btn-apartar").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = Number(btn.getAttribute("data-id"));
-        abrirModal(id);
-      });
+    bindCatalogoLightbox();
+  }
+
+  function bindCatalogoLightbox() {
+    document.querySelectorAll('[data-lightbox="true"]').forEach((image) => {
+      image.onclick = () => {
+        const lightbox = document.getElementById("image-lightbox") || document.createElement("div");
+        if (!document.getElementById("image-lightbox")) {
+          lightbox.id = "image-lightbox";
+          lightbox.className = "image-lightbox";
+          lightbox.innerHTML = `
+            <div class="image-lightbox__panel">
+              <button type="button" class="image-lightbox__close" aria-label="Cerrar vista ampliada">×</button>
+              <img class="image-lightbox__image" src="" alt="Vista ampliada" />
+            </div>
+          `;
+          document.body.appendChild(lightbox);
+
+          const closeBtn = lightbox.querySelector(".image-lightbox__close");
+          const img = lightbox.querySelector(".image-lightbox__image");
+
+          closeBtn.addEventListener("click", () => {
+            lightbox.classList.remove("is-open");
+            img.src = "";
+          });
+
+          lightbox.addEventListener("click", (event) => {
+            if (event.target === lightbox) {
+              lightbox.classList.remove("is-open");
+              img.src = "";
+            }
+          });
+
+          document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape") {
+              lightbox.classList.remove("is-open");
+              img.src = "";
+            }
+          });
+        }
+
+        const img = lightbox.querySelector(".image-lightbox__image");
+        img.src = image.src;
+        img.alt = image.alt;
+        lightbox.classList.add("is-open");
+      };
     });
   }
 
@@ -351,7 +384,7 @@
      --------------------------------------------------------- */
   function construirEnlaceWhatsapp(folio, nombreCliente, diseno) {
     const mensaje =
-      `Hola, quiero apartar mi bebé 👶\n\n` +
+      `Hola, quiero apartar mi bebé\n\n` +
       `Diseño: ${diseno.nombre}\n` +
       `Folio: ${folio}\n` +
       `Precio del diseño: $${diseno.precio} MXN\n` +

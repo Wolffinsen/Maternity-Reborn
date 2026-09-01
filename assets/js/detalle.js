@@ -1,64 +1,159 @@
 const params = new URLSearchParams(window.location.search);
 const id = Number(params.get("id"));
 const modelo = params.get("modelo");
-const bebeBase = CATALOGO.find((item) => item.id === id) || CATALOGO[0];
-const variantes = CATALOGO.filter((item) => item.nombre === bebeBase.nombre);
+const modeloSlug = params.get("modelo");
+const bebeBase = CATALOGO.find((item) => item.id === id) || CATALOGO.find((item) => item.slug === modeloSlug) || CATALOGO[0];
+const variantes = CATALOGO.filter((item) => item.nombre === bebeBase.nombre && item.categorias?.[0] === bebeBase.categorias?.[0]);
 const bebe = variantes.find((item) => item.id === id) || variantes[0] || bebeBase;
 
 const mainImage = document.getElementById("detail-main-image");
 const thumbs = document.getElementById("detail-thumbs");
 const variantCards = document.getElementById("detail-variants");
+const requestBtn = document.getElementById("detail-request-button");
+
+function abrirWhatsappApartado(diseno) {
+  const nombre = diseno?.nombre || "Bebé Reborn";
+  const precio = Number(diseno?.precio ?? 0);
+  const mensaje =
+    `Hola, quiero apartar mi bebé 👶\n\n` +
+    `Diseño: ${nombre}\n` +
+    `Precio del diseño: $${precio.toLocaleString("es-MX")} MXN\n` +
+    `Anticipo de apartado: $${COSTO_APARTADO} MXN\n` +
+    `Quiero reservarlo.`;
+
+  const enlaceWhatsapp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+  window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
+}
+
+function abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel) {
+  const mensaje =
+    `Hola, quiero apartar mi bebé 👶\n\n` +
+    `Diseño: ${modeloSeleccionado}\n` +
+    `Tipo de bebé: ${categoriaLabel}\n` +
+    `Quiero apartar este bebé y me gustaría recibir más información sobre sus opciones de diseño.`;
+
+  const enlaceWhatsapp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
+  window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
+}
+
+function crearLightbox() {
+  let lightbox = document.getElementById("image-lightbox");
+
+  if (!lightbox) {
+    lightbox = document.createElement("div");
+    lightbox.id = "image-lightbox";
+    lightbox.className = "image-lightbox";
+    lightbox.setAttribute("aria-hidden", "true");
+    lightbox.innerHTML = `
+      <div class="image-lightbox__panel" role="dialog" aria-modal="true">
+        <button type="button" class="image-lightbox__close" aria-label="Cerrar vista ampliada">×</button>
+        <img class="image-lightbox__image" src="" alt="Vista ampliada" />
+      </div>
+    `;
+    document.body.appendChild(lightbox);
+
+    const closeBtn = lightbox.querySelector(".image-lightbox__close");
+    const panel = lightbox.querySelector(".image-lightbox__panel");
+    const img = lightbox.querySelector(".image-lightbox__image");
+
+    closeBtn.addEventListener("click", () => {
+      lightbox.classList.remove("is-open");
+      lightbox.setAttribute("aria-hidden", "true");
+      img.src = "";
+      img.alt = "Vista ampliada";
+    });
+
+    lightbox.addEventListener("click", (event) => {
+      if (event.target === lightbox || event.target === panel) {
+        lightbox.classList.remove("is-open");
+        lightbox.setAttribute("aria-hidden", "true");
+        img.src = "";
+        img.alt = "Vista ampliada";
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && lightbox.classList.contains("is-open")) {
+        lightbox.classList.remove("is-open");
+        lightbox.setAttribute("aria-hidden", "true");
+        img.src = "";
+        img.alt = "Vista ampliada";
+      }
+    });
+  }
+
+  return lightbox;
+}
+
+function abrirLightbox(src, alt) {
+  const lightbox = crearLightbox();
+  const img = lightbox.querySelector(".image-lightbox__image");
+  img.src = src;
+  img.alt = alt;
+  lightbox.classList.add("is-open");
+  lightbox.setAttribute("aria-hidden", "false");
+}
+
+function bindImageZoom() {
+  document.querySelectorAll('[data-lightbox="true"]').forEach((image) => {
+    image.addEventListener("click", () => abrirLightbox(image.src, image.alt || "Imagen del bebé"));
+  });
+
+  document.querySelectorAll(".detail-model-gallery img").forEach((image) => {
+    image.setAttribute("data-lightbox", "true");
+    image.addEventListener("click", () => abrirLightbox(image.src, image.alt || "Imagen del bebé"));
+  });
+}
 
 function renderColeccion(modeloSeleccionado) {
-  const items = CATALOGO.filter((item) => item.nombre === modeloSeleccionado);
+  const items = CATALOGO.filter((item) => item.slug === modeloSeleccionado || item.nombre === modeloSeleccionado);
   const contenedor = document.querySelector(".detail-layout");
 
   if (!contenedor || items.length === 0) {
     return;
   }
 
+  const categoriaLabel = CATEGORY_LABELS[items[0]?.categorias?.[0]] || "Bebé personalizado";
+  const descripcionModelo = items[0]?.descripcion || "Este tipo de bebé puede hacerse con varios acabados y detalles personalizados según el gusto de cada familia.";
+  const precios = items.map((variant) => Number(variant.precio ?? 0));
+  const precioMin = Math.min(...precios);
+  const precioMax = Math.max(...precios);
+  const precioEstimado = precioMin === precioMax
+    ? `$${precioMin.toLocaleString("es-MX")} MXN`
+    : `Desde $${precioMin.toLocaleString("es-MX")} MXN`;
+  const fotosModelo = Array.from(new Set(items.flatMap((variant) => (variant.fotos || [variant.imagen]).filter(Boolean))));
+
   contenedor.classList.add("detail-layout--collection");
 
-  const cards = items.map((variant) => {
-    const preview = variant.imagen || variant.fotos?.[0] || "assets/img/diseno-1.jpg";
-    const precio = Number(variant.precio ?? 0);
-    const paletteClass = ["palette-rose", "palette-green", "palette-cream", "palette-gold"][(Number(variant.id) - 1) % 4];
-    const categoriasHtml = (variant.categorias || []).map((categoria) => {
-      const label = CATEGORY_LABELS[categoria] || categoria.replace(/_/g, " ");
-      return `<span class="product-badge">${label}</span>`;
-    }).join("");
-
-    return `
-      <a href="detalle.html?id=${variant.id}" class="tarjeta tarjeta-link" data-id="${variant.id}">
-        <div class="tarjeta-imagen-wrap ${paletteClass}">
-          <span class="badge ${variant.disponible ? "" : "apartado"}">${variant.disponible ? "Disponible" : "Apartado"}</span>
-          <div class="tarjeta-badges">${categoriasHtml}</div>
-          <img src="${preview}" alt="${variant.nombre} ${variant.diseno || "diseño"}" loading="lazy">
-        </div>
-        <div class="tarjeta-info">
-          <h3 class="tarjeta-nombre">${variant.diseno || variant.subtitulo || "Diseño"}</h3>
-          <p class="tarjeta-sub">${variant.subtitulo || "Pieza única hecha a mano"}</p>
-          <p class="tarjeta-precio">$${precio.toLocaleString("es-MX")} MXN</p>
-          <span class="btn-detalle">Ver detalle</span>
-        </div>
-      </a>
-    `;
-  }).join("");
+  const galleryImages = fotosModelo.map((src) => `
+    <img src="${src}" alt="Diseño ${modeloSeleccionado}" loading="lazy" data-lightbox="true">
+  `).join("");
 
   contenedor.innerHTML = `
     <section class="detail-collection">
       <p class="eyebrow"><i></i><span>Diseños</span></p>
-      <h1 class="detail-name">${modeloSeleccionado}</h1>
-      <p class="detail-sub">Selecciona el diseño que más te guste</p>
-      <div class="detail-variants-wrap">
-        <div class="detail-variants-header">
-          <h2>Todos los diseños</h2>
+      <div class="detail-model-header">
+        <div>
+          <h1 class="detail-name">${modeloSeleccionado}</h1>
+          <p class="detail-sub">${descripcionModelo}</p>
+          <p class="detail-variation-note">El diseño de la tela varía.</p>
+          <p class="detail-estimated-price">Precio estimado: ${precioEstimado}</p>
         </div>
-        <div class="catalogo-grid detail-model-grid">${cards}</div>
+        <button type="button" class="btn-primary" id="model-request-button">Quiero este bebé</button>
       </div>
+
+      <div class="detail-model-gallery">${galleryImages}</div>
+
       <a class="btn-primary detail-back-collection-btn" href="index.html#catalogo">Volver al catálogo</a>
     </section>
   `;
+
+  const requestButton = document.getElementById("model-request-button");
+  if (requestButton) {
+    requestButton.addEventListener("click", () => abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel));
+  }
+
+  bindImageZoom();
 }
 
 const CATEGORY_LABELS = {
@@ -176,18 +271,16 @@ function renderVariantCards(variantesDisponibles, activeId) {
 }
 
 function cargarDetalle() {
-  ocultarSeleccionesDetalle();
+  if (!bebe) return;
 
-  const fotos = (bebe.fotos || [bebe.imagen] || []).filter(Boolean);
-  const imagenInicial = fotos[0] || bebe.imagen;
-
-  actualizarDetalles(bebe);
-  renderThumbs(fotos);
-  mostrarFoto(imagenInicial, `Bebé reborn ${bebe.nombre}`);
+  const modeloNombre = bebe.nombre;
+  renderColeccion(modeloNombre);
 }
 
 if (modelo) {
   renderColeccion(modelo);
+} else if (bebe && bebe.nombre) {
+  renderColeccion(bebe.nombre);
 } else {
   cargarDetalle();
 }
