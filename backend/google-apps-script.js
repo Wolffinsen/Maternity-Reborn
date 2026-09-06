@@ -15,6 +15,7 @@
  */
 
 const SALES_SHEET_NAME = "Ventas";
+const CATALOG_SHEET_NAME = "Catalogo";
 
 function doPost(event) {
   try {
@@ -34,6 +35,14 @@ function doPost(event) {
       }
 
       return jsonResponse({ ok: true, data: readSalesRows() });
+    }
+
+    if (payload.action === "readCatalog") {
+      return jsonResponse({ ok: true, action: "readCatalog", data: readCatalogRows() });
+    }
+
+    if (payload.action === "saveCatalog") {
+      return saveCatalog(payload);
     }
 
     if (payload.action === "updateSaleStatus") {
@@ -149,9 +158,97 @@ function updateSaleStatus(payload) {
   return jsonResponse({ ok: true, action: "updateSaleStatus", folio: payload.folio, estado: estado });
 }
 
+function saveCatalog(payload) {
+  if (!isAdminPasswordValid(payload.password)) {
+    return jsonResponse({ ok: false, error: "No autorizado" });
+  }
+
+  if (!Array.isArray(payload.data)) {
+    return jsonResponse({ ok: false, error: "El catálogo no tiene un formato válido." });
+  }
+
+  const sheet = getCatalogSheet();
+  const headers = ensureCatalogHeaders(sheet);
+  const rows = payload.data.map(function (product) {
+    return headers.map(function (header) {
+      switch (normalizeHeader(header)) {
+        case "id": return product.id || "";
+        case "nombre": return product.nombre || "";
+        case "categoria": return product.categorias && product.categorias[0] || product.categoria || "";
+        case "descripcion": return product.descripcion || "";
+        case "precio": return Number(product.precio || 0);
+        case "imagen": return product.imagen || "";
+        case "fotos": return JSON.stringify(product.fotos || []);
+        case "disponible": return product.disponible !== false;
+        case "talla": return product.talla || "";
+        case "material": return product.material || "";
+        case "esnuevo": return product.esNuevo === true;
+        default: return "";
+      }
+    });
+  });
+
+  if (sheet.getMaxRows() > 1) {
+    sheet.getRange(2, 1, sheet.getMaxRows() - 1, headers.length).clearContent();
+  }
+  if (rows.length) {
+    sheet.getRange(2, 1, rows.length, headers.length).setValues(rows);
+  }
+
+  return jsonResponse({ ok: true, action: "saveCatalog", count: rows.length });
+}
+
+function readCatalogRows() {
+  const sheet = getCatalogSheet();
+  const values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+
+  const headers = values[0];
+  return values.slice(1)
+    .filter(function (row) { return row.some(function (value) { return value !== ""; }); })
+    .map(function (row) {
+      let fotos = [];
+      try {
+        fotos = JSON.parse(getCell(row, headers, ["fotos"]) || "[]");
+      } catch (error) {
+        fotos = [];
+      }
+
+      const imagen = getCell(row, headers, ["imagen"]);
+      return {
+        id: Number(getCell(row, headers, ["id"]) || 0),
+        nombre: getCell(row, headers, ["nombre"]),
+        categoria: getCell(row, headers, ["categoria"]),
+        descripcion: getCell(row, headers, ["descripcion"]),
+        precio: Number(getCell(row, headers, ["precio"]) || 0),
+        imagen: imagen,
+        fotos: fotos.length ? fotos : [imagen],
+        disponible: String(getCell(row, headers, ["disponible"])).toLowerCase() !== "false",
+        talla: getCell(row, headers, ["talla"]),
+        material: getCell(row, headers, ["material"]),
+        esNuevo: String(getCell(row, headers, ["esnuevo"])).toLowerCase() === "true"
+      };
+    });
+}
+
 function getSalesSheet() {
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   return spreadsheet.getSheetByName(SALES_SHEET_NAME) || spreadsheet.getSheets()[0];
+}
+
+function getCatalogSheet() {
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  return spreadsheet.getSheetByName(CATALOG_SHEET_NAME) || spreadsheet.insertSheet(CATALOG_SHEET_NAME);
+}
+
+function ensureCatalogHeaders(sheet) {
+  const headers = ["ID", "Nombre", "Categoria", "Descripcion", "Precio", "Imagen", "Fotos", "Disponible", "Talla", "Material", "EsNuevo"];
+  if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
+    sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+    return headers;
+  }
+
+  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
 }
 
 function ensureHeaders(sheet) {

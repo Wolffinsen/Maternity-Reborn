@@ -294,6 +294,9 @@
     searchInput.addEventListener("input", renderCatalogo);
   }
 
+  window.addEventListener("catalogo:render", renderCatalogo);
+  window.renderCatalogo = renderCatalogo;
+
   /* ---------------------------------------------------------
      2. MODAL: abrir / cerrar
      --------------------------------------------------------- */
@@ -443,4 +446,5 @@
   mostrarToastAnticipo();
   activarScrollSuave();
   renderCatalogo();
+  CATALOGO_READY.then(() => renderCatalogo());
 })();

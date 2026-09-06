@@ -50,9 +50,9 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Alexa, diseño nuevo para talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/Nuevo Alexa.jpg",
+    imagen: "assets/img/prematuros/Nuevo Alexa.jpg",
     fotos: [
-      "assets/img/Nuevo Alexa.jpg"
+      "assets/img/prematuros/Nuevo Alexa.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn",
@@ -64,9 +64,9 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Jorge, diseño nuevo para talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/Nuevo Jorge.jpg",
+    imagen: "assets/img/prematuros/Nuevo Jorge.jpg",
     fotos: [
-      "assets/img/Nuevo Jorge.jpg"
+      "assets/img/prematuros/Nuevo Jorge.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn",
@@ -78,9 +78,9 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Alejandro, diseño nuevo para talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/Alejandro.jpg",
+    imagen: "assets/img/prematuros/Alejandro.jpg",
     fotos: [
-      "assets/img/Alejandro.jpg"
+      "assets/img/prematuros/Alejandro.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn",
@@ -92,11 +92,14 @@ const CATALOGO = [
     categoria: "recien_nacido",
     descripcion: "Bebé Reborn Dylan, diseño nuevo para recién nacido.",
     precio: 2800,
-    imagen: "assets/img/Dylan1.jpg",
+    imagen: "assets/img/recien nacidos/KitDylan15.jpg",
     fotos: [
-      "assets/img/Dylan1.jpg",
-      "assets/img/Dylan2.jpg",
-      "assets/img/Dylan3.jpg"
+      "assets/img/recien nacidos/KitDylan15.jpg",
+      "assets/img/recien nacidos/KitDylan16.jpg",
+      "assets/img/recien nacidos/KitDylan17.JPG",
+      "assets/img/recien nacidos/KitDylan18.jpg",
+      "assets/img/recien nacidos/KitDylan19.jpg",
+      "assets/img/recien nacidos/KitDylan20.jpg"
     ],
     talla: "42 cm · 2.200 kg aprox.",
     material: "Vinilo reborn",
@@ -108,10 +111,10 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Santi, diseño nuevo para talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/santi.jpg",
+    imagen: "assets/img/prematuros/santi.jpg",
     fotos: [
-      "assets/img/santi.jpg",
-      "assets/img/santi1.jpg"
+      "assets/img/prematuros/santi.jpg",
+      "assets/img/prematuros/santi1.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn",
@@ -123,10 +126,12 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Sofía, diseño base premium en talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/Sofia Diseño Sorpresa.jpg",
+    imagen: "assets/img/prematuros/Sofia Diseño Sorpresa.jpg",
     fotos: [
-      "assets/img/Sofia Diseño Sorpresa.jpg",
-      "assets/img/Sofia Diseño conejo.jpg"
+      "assets/img/prematuros/Sofia Diseño Sorpresa.jpg",
+      "assets/img/prematuros/Sofia Diseño conejo.jpg",
+      "assets/img/prematuros/Sofia2.jpg",
+      "assets/img/prematuros/Sofia5.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn"
@@ -137,9 +142,12 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Katy, diseño base para talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/Kit Katy Diseño Sorpresa.jpg",
+    imagen: "assets/img/prematuros/Kit Katy Diseño Sorpresa.jpg",
     fotos: [
-      "assets/img/Kit Katy Diseño Sorpresa.jpg"
+      "assets/img/prematuros/Kit Katy Diseño Sorpresa.jpg",
+      "assets/img/prematuros/Kit Katy Diseño Conejo.jpg",
+      "assets/img/prematuros/Kit Katy.jpg",
+      "assets/img/prematuros/katy1.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn"
@@ -150,11 +158,15 @@ const CATALOGO = [
     categoria: "prematuro",
     descripcion: "Bebé Reborn Lili, diseño base para talla prematuro.",
     precio: 2300,
-    imagen: "assets/img/Kit Lili Diseño Sorpresa.jpg",
+    imagen: "assets/img/prematuros/Kit Lili Diseño Sorpresa.jpg",
     fotos: [
-      "assets/img/Kit Lili Diseño Sorpresa.jpg",
-      "assets/img/Kit Lili Diseño Conejo.PNG",
-      "assets/img/Kit Lili Diseño Tejido.jpg"
+      "assets/img/prematuros/Kit Lili Diseño Sorpresa.jpg",
+      "assets/img/prematuros/Kit Lili Diseño Conejo.PNG",
+      "assets/img/prematuros/Kit Lili Diseño Tejido.jpg",
+      "assets/img/prematuros/Kit Lili Diseño Gemelos Orejas.PNG",
+      "assets/img/prematuros/Kit Lili Diseño Gemelas Conejo.JPG",
+      "assets/img/prematuros/lili1.jpg",
+      "assets/img/prematuros/lili2.jpg"
     ],
     talla: "35 cm · 1.800 kg aprox.",
     material: "Vinilo reborn"
@@ -165,102 +177,187 @@ const CATALOGO = [
     categoria: "recien_nacido",
     descripcion: "Bebé Reborn Tony, diseño base para recién nacido.",
     precio: 2800,
-    imagen: "assets/img/diseno-15.jpg",
-    fotos: ["assets/img/diseno-15.jpg"],
+    imagen: "assets/img/recien nacidos/kitTony11.jpg",
+    fotos: [
+      "assets/img/recien nacidos/kitTony11.jpg",
+      "assets/img/recien nacidos/KitTony12.jpg",
+      "assets/img/recien nacidos/KitTony13.jpg",
+      "assets/img/recien nacidos/KitTony14.jpg",
+      "assets/img/recien nacidos/KitTony15.jpg",
+      "assets/img/recien nacidos/KitTony16.jpg",
+      "assets/img/recien nacidos/KitTony21.jpg",
+      "assets/img/recien nacidos/KitTony23.jpg",
+      "assets/img/recien nacidos/KitTony24.jpg",
+      "assets/img/recien nacidos/KitTony27.jpg"
+    ],
     talla: "42 cm · 2.200 kg aprox.",
     material: "Vinilo reborn"
   }),
   crearDiseno({
-    id: 8,
+    id: 15,
     nombre: "Sonriente",
     categoria: "recien_nacido",
     descripcion: "Bebé Reborn Sonriente, diseño base para recién nacido.",
     precio: 2800,
-    imagen: "assets/img/diseno-34.jpg",
-    fotos: ["assets/img/diseno-34.jpg"],
+    imagen: "assets/img/recien nacidos/KitSonriente12.jpg",
+    fotos: [
+      "assets/img/recien nacidos/KitSonriente12.jpg",
+      "assets/img/recien nacidos/KitSonriente20.jpg",
+      "assets/img/recien nacidos/KitSonriente21.jpg",
+      "assets/img/recien nacidos/KitSonriente22.JPG"
+    ],
     talla: "42 cm · 2.200 kg aprox.",
     material: "Vinilo reborn"
   }),
   crearDiseno({
-    id: 9,
-    nombre: "Luis Ángel",
-    categoria: "3_meses",
-    descripcion: "Bebé Reborn Luis Ángel, diseño base para talla 3 meses.",
-    precio: 3300,
-    imagen: "assets/img/diseno-53.jpg",
-    fotos: ["assets/img/diseno-53.jpg"],
-    talla: "55 cm · 2.800 kg aprox.",
-    material: "Vinilo reborn"
-  }),
-  crearDiseno({
     id: 10,
-    nombre: "Berengue",
+    nombre: "Dylan",
     categoria: "3_meses",
-    descripcion: "Bebé Reborn Berengue, diseño base para talla 3 meses.",
-    precio: 3300,
-    imagen: "assets/img/diseno-56.jpg",
-    fotos: ["assets/img/diseno-56.jpg"],
-    talla: "55 cm · 2.800 kg aprox.",
-    material: "Vinilo reborn"
-  }),
-  crearDiseno({
-    id: 11,
-    nombre: "Gael",
-    categoria: "3_meses",
-    descripcion: "Bebé Reborn Gael, diseño base para talla 3 meses.",
-    precio: 3300,
-    imagen: "assets/img/diseno-60.jpg",
-    fotos: ["assets/img/diseno-60.jpg"],
-    talla: "55 cm · 2.800 kg aprox.",
-    material: "Vinilo reborn"
-  }),
-  crearDiseno({
-    id: 12,
-    nombre: "Toto",
-    categoria: "3_meses",
-    descripcion: "Bebé Reborn Toto, diseño base para talla 3 meses.",
-    precio: 3300,
-    imagen: "assets/img/diseno-58.jpg",
-    fotos: ["assets/img/diseno-58.jpg"],
-    talla: "55 cm · 2.800 kg aprox.",
-    material: "Vinilo reborn"
-  }),
-  crearDiseno({
-    id: 18,
-    nombre: "Santi",
-    categoria: "prematuro",
-    descripcion: "Bebé Reborn Santi, diseño nuevo para talla prematuro.",
-    precio: 2300,
-    imagen: "assets/img/santi.jpg",
-    fotos: ["assets/img/santi.jpg", "assets/img/santi1.jpg"],
-    talla: "35 cm · 1.800 kg aprox.",
+    descripcion: "Bebé Reborn Dylan, diseño nuevo para talla de 3 meses.",
+    precio: 3200,
+    imagen: "assets/img/tres meses/Kit dylan30.jpg",
+    fotos: [
+      "assets/img/tres meses/Kit dylan30.jpg"
+    ],
+    talla: "50 cm · 3.000 kg aprox.",
     material: "Vinilo reborn",
     esNuevo: true
   }),
   crearDiseno({
-    id: 14,
-    nombre: "Lili",
-    categoria: "silicona_premium",
-    descripcion: "Bebé Reborn Lili, diseño base en silicona premium.",
-    precio: 3500,
-    imagen: "assets/img/diseno-66.jpg",
-    fotos: ["assets/img/diseno-66.jpg", "assets/img/diseno-68.jpg"],
-    talla: "32 cm · 1.800 kg aprox.",
-    material: "Silicona premium"
+    id: 11,
+    nombre: "Berengue",
+    categoria: "3_meses",
+    descripcion: "Bebé Reborn Berengue, diseño para talla de 3 meses.",
+    precio: 3200,
+    imagen: "assets/img/tres meses/KitBerengue1.jpg",
+    fotos: [
+      "assets/img/tres meses/KitBerengue1.jpg",
+      "assets/img/tres meses/KitBerengue2.jpg"
+    ],
+    talla: "50 cm · 3.000 kg aprox.",
+    material: "Vinilo reborn"
   }),
   crearDiseno({
-    id: 15,
-    nombre: "Katy",
-    categoria: "silicona_premium",
-    descripcion: "Bebé Reborn Katy, diseño base en silicona premium.",
-    precio: 3500,
-    imagen: "assets/img/diseno-67.jpg",
-    fotos: ["assets/img/diseno-67.jpg"],
-    talla: "32 cm · 1.800 kg aprox.",
-    material: "Silicona premium"
-  })
+    id: 12,
+    nombre: "Gael",
+    categoria: "3_meses",
+    descripcion: "Bebé Reborn Gael, diseño para talla de 3 meses.",
+    precio: 3200,
+    imagen: "assets/img/tres meses/KitGael1.jpg",
+    fotos: [
+      "assets/img/tres meses/KitGael1.jpg",
+      "assets/img/tres meses/KitGael2.jpg"
+    ],
+    talla: "50 cm · 3.000 kg aprox.",
+    material: "Vinilo reborn"
+  }),
+  crearDiseno({
+    id: 13,
+    nombre: "Luis Angel",
+    categoria: "3_meses",
+    descripcion: "Bebé Reborn Luis Angel, diseño para talla de 3 meses.",
+    precio: 3200,
+    imagen: "assets/img/tres meses/KitLuisAngel1.jpg",
+    fotos: [
+      "assets/img/tres meses/KitLuisAngel1.jpg",
+      "assets/img/tres meses/KitLuisAngel2.jpg",
+      "assets/img/tres meses/KitLuisAngel3.jpg",
+      "assets/img/tres meses/KitLuisAngel4.jpg",
+      "assets/img/tres meses/KitLuisAngel5.jpg"
+    ],
+    talla: "50 cm · 3.000 kg aprox.",
+    material: "Vinilo reborn"
+  }),
+  crearDiseno({
+    id: 14,
+    nombre: "Toto",
+    categoria: "3_meses",
+    descripcion: "Bebé Reborn Toto, diseño para talla de 3 meses.",
+    precio: 3200,
+    imagen: "assets/img/tres meses/KitToto1.jpeg",
+    fotos: [
+      "assets/img/tres meses/KitToto1.jpeg",
+      "assets/img/tres meses/KitToto3.jpg",
+      "assets/img/tres meses/KitToto5.jpg",
+      "assets/img/tres meses/KitToto6.jpg"
+    ],
+    talla: "50 cm · 3.000 kg aprox.",
+    material: "Vinilo reborn"
+  }),
 ];
+
+const CATALOGO_STORAGE_KEY = "maternityRebornCatalogo";
+const ADMIN_SESSION_KEY = "maternityRebornAdmin";
+const ADMIN_PASSWORD_SESSION_KEY = "maternityRebornAdminPassword";
+let CATALOGO_REMOTE_CHANGED = false;
+
+function cargarCatalogoGuardado() {
+  try {
+    const guardado = JSON.parse(localStorage.getItem(CATALOGO_STORAGE_KEY) || "null");
+    if (Array.isArray(guardado)) {
+      CATALOGO.splice(0, CATALOGO.length, ...guardado);
+    }
+  } catch (error) {
+    console.warn("No se pudo cargar el catálogo guardado:", error);
+  }
+}
+
+function guardarCatalogo() {
+  try {
+    localStorage.setItem(CATALOGO_STORAGE_KEY, JSON.stringify(CATALOGO));
+    return { ok: true };
+  } catch (error) {
+    console.error("No se pudo guardar el catálogo:", error);
+    return { ok: false, error };
+  }
+}
+
+async function cargarCatalogoRemoto() {
+  if (!URL_APPS_SCRIPT) return { ok: false };
+
+  try {
+    const response = await fetch(URL_APPS_SCRIPT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "readCatalog" })
+    });
+    const result = await response.json();
+    if (!result.ok || result.action !== "readCatalog" || !Array.isArray(result.data) || !result.data.length) return { ok: false };
+
+    const remoteCatalog = result.data.map((item) => crearDiseno(item));
+    const changed = JSON.stringify(CATALOGO) !== JSON.stringify(remoteCatalog);
+    CATALOGO.splice(0, CATALOGO.length, ...remoteCatalog);
+    CATALOGO_REMOTE_CHANGED = changed;
+    guardarCatalogo();
+    return { ok: true, changed };
+  } catch (error) {
+    console.warn("No se pudo cargar el catálogo desde Apps Script:", error);
+    return { ok: false, error };
+  }
+}
+
+async function guardarCatalogoRemoto(password) {
+  if (!URL_APPS_SCRIPT) return { ok: false, error: "No hay conexión configurada con el servidor." };
+
+  try {
+    const response = await fetch(URL_APPS_SCRIPT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveCatalog", password, data: CATALOGO })
+    });
+    const result = await response.json();
+    if (!result.ok || result.action !== "saveCatalog") {
+      return { ok: false, error: "El Apps Script publicado todavía no tiene la conexión del catálogo. Publica la versión actualizada." };
+    }
+    return result;
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+cargarCatalogoGuardado();
 
 const NUMERO_WHATSAPP = "5216692653343";
 const COSTO_APARTADO = 200;
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzrIJX4SrXc8IEEZ5qrsfp9ue9RVAvAv-SKi8AUEx2RFBDEumJdlj2dkq13dALGaz3v/exec";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxwESaHUK2mrrFmKaT6gPB762awBtyuHIQfo2N7cENcrU-5quUUkJIg6tKmIUj5brTt/exec";
+const CATALOGO_READY = cargarCatalogoRemoto();

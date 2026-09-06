@@ -231,6 +231,8 @@
         showError("El servidor todavía usa una versión anterior. Actualiza la implementación de Apps Script.");
       } else if (result.ok) {
         adminPassword = candidate;
+        sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
+        sessionStorage.setItem(ADMIN_PASSWORD_SESSION_KEY, candidate);
         setAccess(true);
         await fetchSalesData();
       } else {
@@ -247,6 +249,8 @@
 
   btnLogout.addEventListener("click", () => {
     setAccess(false);
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    sessionStorage.removeItem(ADMIN_PASSWORD_SESSION_KEY);
     secretInput.value = "";
     clearError();
   });
@@ -283,6 +287,7 @@
       }
 
       adminPassword = newPasswordInput.value;
+      sessionStorage.setItem(ADMIN_PASSWORD_SESSION_KEY, adminPassword);
       changePasswordForm.reset();
       showPasswordMessage("Contraseña actualizada correctamente.", false);
     } catch (error) {

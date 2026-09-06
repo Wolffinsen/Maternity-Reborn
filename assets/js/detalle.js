@@ -255,7 +255,7 @@ function actualizarDetalles(variant) {
 
 function renderVariantCards(variantesDisponibles, activeId) {
   variantCards.innerHTML = variantesDisponibles.map((variant) => {
-    const preview = variant.imagen || variant.fotos?.[0] || "assets/img/diseno-1.jpg";
+    const preview = variant.imagen || variant.fotos?.[0] || "assets/img/prematuros/Alejandro.jpg";
     const precio = Number(variant.precio ?? 0);
     const isActive = variant.id === activeId ? "is-active" : "";
     return `
@@ -284,3 +284,7 @@ if (modelo) {
 } else {
   cargarDetalle();
 }
+
+CATALOGO_READY.then(() => {
+  if (CATALOGO_REMOTE_CHANGED) window.location.reload();
+});
