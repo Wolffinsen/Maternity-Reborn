@@ -39,7 +39,6 @@
       <p>Los cambios se guardan en Google Sheets y se reflejan para todos tus clientes.</p>
     </div>
     <button type="button" class="btn-primary" id="catalogo-admin-add">Agregar producto</button>
-    <button type="button" class="btn-secondary" id="catalogo-admin-migrate">Subir imágenes existentes</button>
     <button type="button" class="btn-secondary" id="catalogo-admin-manage">Editar productos</button>
   `;
   catalogoHeading.insertAdjacentElement("afterend", editor);
@@ -66,15 +65,10 @@
           <div><label class="field-label" for="catalogo-admin-size">Talla</label><input class="field-input" id="catalogo-admin-size" required></div>
           <div><label class="field-label" for="catalogo-admin-material">Material</label><input class="field-input" id="catalogo-admin-material" required></div>
         </div>
-        <label class="field-label" for="catalogo-admin-image">Imagen principal (URL o ruta)</label>
-        <input class="field-input" id="catalogo-admin-image" placeholder="https://... o assets/img/...">
-        <label class="field-label" for="catalogo-admin-file">O sube la imagen principal desde tu equipo</label>
-        <input class="field-input" id="catalogo-admin-file" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
-        <label class="field-label" for="catalogo-admin-gallery">Imágenes adicionales (una URL por línea)</label>
-        <textarea class="field-input" id="catalogo-admin-gallery" rows="4" placeholder="https://...&#10;assets/img/..."></textarea>
-        <label class="field-label" for="catalogo-admin-gallery-files">O sube imágenes adicionales desde tu equipo</label>
-        <input class="field-input" id="catalogo-admin-gallery-files" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
-        <p class="catalogo-admin-hint" id="catalogo-admin-upload-hint">Sólo JPEG, JPG o PNG de máximo 5 MB. Las fotos se guardan automáticamente en Cloudinary.</p>
+        <div class="catalogo-admin-gallery-head"><label class="field-label" for="catalogo-admin-gallery-files">Imágenes del producto</label><button type="button" class="btn-secondary catalogo-admin-add-images" id="catalogo-admin-add-images">Añadir imágenes</button></div>
+        <input class="catalogo-admin-file-hidden" id="catalogo-admin-gallery-files" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
+        <div class="catalogo-admin-gallery" id="catalogo-admin-gallery" aria-live="polite"></div>
+        <p class="catalogo-admin-hint" id="catalogo-admin-upload-hint">Arrastra para ordenar. La primera imagen será la portada. Sólo JPEG, JPG o PNG de máximo 5 MB.</p>
         <label class="catalogo-admin-check"><input id="catalogo-admin-available" type="checkbox"> Disponible</label>
         <label class="catalogo-admin-check"><input id="catalogo-admin-new" type="checkbox"> Marcar como nuevo</label>
         <div class="catalogo-admin-actions"><button type="submit" class="btn-primary">Guardar cambios</button><button type="button" class="btn-secondary" id="catalogo-admin-cancel">Cancelar</button></div>
@@ -96,7 +90,11 @@
   const products = overlay.querySelector("#catalogo-admin-products");
   const form = overlay.querySelector("#catalogo-admin-form");
   const storageNote = overlay.querySelector("#catalogo-admin-storage-note");
+  const imageGallery = overlay.querySelector("#catalogo-admin-gallery");
+  const imageFileInput = overlay.querySelector("#catalogo-admin-gallery-files");
   let editingProduct = null;
+  let galleryImages = [];
+  let draggedImageIndex = null;
 
   function cloudinaryConfigurado() {
     return Boolean(
@@ -162,6 +160,54 @@
     }
   }
 
+  function imagenesUnicas(images) {
+    return images.filter(Boolean).filter((image, index, values) => values.indexOf(image) === index);
+  }
+
+  function renderImageGallery() {
+    if (!galleryImages.length) {
+      imageGallery.innerHTML = '<p class="catalogo-admin-gallery-empty">Aún no hay imágenes. Añade archivos para crear la galería.</p>';
+      return;
+    }
+
+    imageGallery.innerHTML = galleryImages.map((image, index) => `
+      <article class="catalogo-admin-gallery-item${index === 0 ? " is-main" : ""}" draggable="true" data-image-index="${index}">
+        <img src="${image}" alt="Imagen ${index + 1}" onerror="this.style.opacity='0.35'">
+        ${index === 0 ? '<span class="catalogo-admin-gallery-badge">Principal</span>' : '<button type="button" class="catalogo-admin-gallery-main" data-gallery-action="main">Hacer principal</button>'}
+        <button type="button" class="catalogo-admin-gallery-remove" data-gallery-action="remove" aria-label="Eliminar imagen ${index + 1}">&times;</button>
+        <span class="catalogo-admin-gallery-order">${index + 1}</span>
+      </article>
+    `).join("");
+
+    imageGallery.querySelectorAll(".catalogo-admin-gallery-item").forEach((item) => {
+      item.addEventListener("dragstart", () => {
+        draggedImageIndex = Number(item.dataset.imageIndex);
+        item.classList.add("is-dragging");
+      });
+      item.addEventListener("dragend", () => {
+        draggedImageIndex = null;
+        item.classList.remove("is-dragging");
+      });
+      item.addEventListener("dragover", (event) => event.preventDefault());
+      item.addEventListener("drop", (event) => {
+        event.preventDefault();
+        const targetIndex = Number(item.dataset.imageIndex);
+        if (draggedImageIndex === null || draggedImageIndex === targetIndex) return;
+        const [movedImage] = galleryImages.splice(draggedImageIndex, 1);
+        galleryImages.splice(targetIndex, 0, movedImage);
+        renderImageGallery();
+      });
+      item.addEventListener("click", (event) => {
+        const action = event.target.closest("[data-gallery-action]")?.dataset.galleryAction;
+        if (!action) return;
+        const index = Number(item.dataset.imageIndex);
+        if (action === "remove") galleryImages.splice(index, 1);
+        if (action === "main") galleryImages.unshift(...galleryImages.splice(index, 1));
+        renderImageGallery();
+      });
+    });
+  }
+
   function openEditor(product) {
     editingProduct = product || null;
     overlay.hidden = false;
@@ -175,10 +221,9 @@
     overlay.querySelector("#catalogo-admin-price").value = product?.precio || "";
     overlay.querySelector("#catalogo-admin-size").value = product?.talla || "Talla estándar";
     overlay.querySelector("#catalogo-admin-material").value = product?.material || "Vinilo reborn";
-    overlay.querySelector("#catalogo-admin-image").value = product?.imagen || "";
-    overlay.querySelector("#catalogo-admin-file").value = "";
-    overlay.querySelector("#catalogo-admin-gallery-files").value = "";
-    overlay.querySelector("#catalogo-admin-gallery").value = (product?.fotos || []).filter((foto) => foto !== product?.imagen).join("\n");
+    galleryImages = imagenesUnicas([product?.imagen, ...(product?.fotos || [])]);
+    imageFileInput.value = "";
+    renderImageGallery();
     overlay.querySelector("#catalogo-admin-available").checked = product ? product.disponible !== false : true;
     overlay.querySelector("#catalogo-admin-new").checked = Boolean(product?.esNuevo);
     overlay.querySelector("#catalogo-admin-message").hidden = true;
@@ -322,12 +367,33 @@
 
   editor.querySelector("#catalogo-admin-add").addEventListener("click", () => openEditor(null));
   editor.querySelector("#catalogo-admin-manage").addEventListener("click", showProductGrid);
-  editor.querySelector("#catalogo-admin-migrate").addEventListener("click", () => migrationInput.click());
   migrationInput.addEventListener("change", () => {
     migrarImagenesExistentes(migrationInput.files);
     migrationInput.value = "";
   });
   overlay.querySelector("#catalogo-admin-close").addEventListener("click", closeEditor);
+  overlay.querySelector("#catalogo-admin-add-images").addEventListener("click", () => imageFileInput.click());
+  imageFileInput.addEventListener("change", async () => {
+    const files = [...imageFileInput.files];
+    if (!files.length) return;
+    const message = overlay.querySelector("#catalogo-admin-message");
+    try {
+      files.forEach(validarImagen);
+      for (let index = 0; index < files.length; index++) {
+        message.hidden = false;
+        message.classList.remove("is-success");
+        message.textContent = `Subiendo imagen ${index + 1} de ${files.length}...`;
+        galleryImages.push(await subirImagenCloudinary(files[index]));
+      }
+      message.hidden = true;
+      renderImageGallery();
+    } catch (error) {
+      message.textContent = error.message || "No se pudieron subir las imágenes.";
+      message.hidden = false;
+    } finally {
+      imageFileInput.value = "";
+    }
+  });
   overlay.querySelector("#catalogo-admin-cancel").addEventListener("click", () => {
     if (CATALOGO.length) {
       showProductGrid();
@@ -352,29 +418,9 @@
     const respaldo = CATALOGO.slice();
 
     try {
-      const primaryFileInput = overlay.querySelector("#catalogo-admin-file").files[0];
-      const galleryFileInputs = [...overlay.querySelector("#catalogo-admin-gallery-files").files];
-
-      [primaryFileInput, ...galleryFileInputs].filter(Boolean).forEach(validarImagen);
-
-      let primaryUploadedUrl = "";
-      const galleryUploadedUrls = [];
-
-      if (primaryFileInput) {
-        saveButton.textContent = "Subiendo imagen principal...";
-        primaryUploadedUrl = await subirImagenCloudinary(primaryFileInput);
-      }
-
-      for (let i = 0; i < galleryFileInputs.length; i++) {
-        saveButton.textContent = `Subiendo foto ${i + 1} de ${galleryFileInputs.length}...`;
-        galleryUploadedUrls.push(await subirImagenCloudinary(galleryFileInputs[i]));
-      }
-
       saveButton.textContent = "Guardando...";
-
-      const image = primaryUploadedUrl || overlay.querySelector("#catalogo-admin-image").value.trim();
-      const gallery = overlay.querySelector("#catalogo-admin-gallery").value.split("\n").map((value) => value.trim()).filter(Boolean);
-      if (!image) throw new Error("Agrega una imagen principal (URL o archivo).");
+      const images = imagenesUnicas(galleryImages);
+      if (!images.length) throw new Error("Agrega al menos una imagen para el producto.");
 
       const nombre = overlay.querySelector("#catalogo-admin-name").value.trim();
       if (!nombre) throw new Error("Agrega un nombre para el producto.");
@@ -385,14 +431,8 @@
         categoria: overlay.querySelector("#catalogo-admin-category").value,
         descripcion: overlay.querySelector("#catalogo-admin-description").value.trim(),
         precio: Number(overlay.querySelector("#catalogo-admin-price").value || 0),
-        imagen: image,
-        fotos: [
-          ...(editingProduct?.fotos || []),
-          editingProduct?.imagen,
-          image,
-          ...gallery,
-          ...galleryUploadedUrls
-        ].filter(Boolean).filter((value, index, values) => values.indexOf(value) === index),
+        imagen: images[0],
+        fotos: images,
         disponible: overlay.querySelector("#catalogo-admin-available").checked,
         talla: overlay.querySelector("#catalogo-admin-size").value.trim(),
         material: overlay.querySelector("#catalogo-admin-material").value.trim(),
