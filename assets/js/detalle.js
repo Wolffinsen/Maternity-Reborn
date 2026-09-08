@@ -36,6 +36,41 @@ function abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel) {
   window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
 }
 
+let GALLERY_PHOTOS = [];
+let GALLERY_INDEX = 0;
+
+function cerrarLightbox() {
+  const lightbox = document.getElementById("image-lightbox");
+  if (!lightbox) return;
+
+  lightbox.classList.remove("is-open");
+  lightbox.setAttribute("aria-hidden", "true");
+}
+
+function pintarLightbox() {
+  const lightbox = document.getElementById("image-lightbox");
+  if (!lightbox || !GALLERY_PHOTOS.length) return;
+
+  const photo = GALLERY_PHOTOS[GALLERY_INDEX];
+  const image = lightbox.querySelector(".image-lightbox__image");
+  const counter = lightbox.querySelector(".image-lightbox__counter");
+  const previous = lightbox.querySelector(".image-lightbox__nav--prev");
+  const next = lightbox.querySelector(".image-lightbox__nav--next");
+
+  image.src = photo.src;
+  image.alt = photo.alt;
+  counter.textContent = `${GALLERY_INDEX + 1} / ${GALLERY_PHOTOS.length}`;
+  previous.hidden = GALLERY_PHOTOS.length < 2;
+  next.hidden = GALLERY_PHOTOS.length < 2;
+  counter.hidden = GALLERY_PHOTOS.length < 2;
+}
+
+function moverLightbox(delta) {
+  if (GALLERY_PHOTOS.length < 2) return;
+  GALLERY_INDEX = (GALLERY_INDEX + delta + GALLERY_PHOTOS.length) % GALLERY_PHOTOS.length;
+  pintarLightbox();
+}
+
 function crearLightbox() {
   let lightbox = document.getElementById("image-lightbox");
 
@@ -47,61 +82,97 @@ function crearLightbox() {
     lightbox.innerHTML = `
       <div class="image-lightbox__panel" role="dialog" aria-modal="true">
         <button type="button" class="image-lightbox__close" aria-label="Cerrar vista ampliada">×</button>
+        <button type="button" class="image-lightbox__nav image-lightbox__nav--prev" aria-label="Foto anterior">‹</button>
         <img class="image-lightbox__image" src="" alt="Vista ampliada" />
+        <button type="button" class="image-lightbox__nav image-lightbox__nav--next" aria-label="Foto siguiente">›</button>
+        <p class="image-lightbox__counter" aria-live="polite"></p>
       </div>
     `;
     document.body.appendChild(lightbox);
 
     const closeBtn = lightbox.querySelector(".image-lightbox__close");
     const panel = lightbox.querySelector(".image-lightbox__panel");
-    const img = lightbox.querySelector(".image-lightbox__image");
 
-    closeBtn.addEventListener("click", () => {
-      lightbox.classList.remove("is-open");
-      lightbox.setAttribute("aria-hidden", "true");
-      img.src = "";
-      img.alt = "Vista ampliada";
-    });
+    closeBtn.addEventListener("click", cerrarLightbox);
+    lightbox.querySelector(".image-lightbox__nav--prev").addEventListener("click", () => moverLightbox(-1));
+    lightbox.querySelector(".image-lightbox__nav--next").addEventListener("click", () => moverLightbox(1));
 
     lightbox.addEventListener("click", (event) => {
-      if (event.target === lightbox || event.target === panel) {
-        lightbox.classList.remove("is-open");
-        lightbox.setAttribute("aria-hidden", "true");
-        img.src = "";
-        img.alt = "Vista ampliada";
-      }
+      if (event.target === lightbox || event.target === panel) cerrarLightbox();
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape" && lightbox.classList.contains("is-open")) {
-        lightbox.classList.remove("is-open");
-        lightbox.setAttribute("aria-hidden", "true");
-        img.src = "";
-        img.alt = "Vista ampliada";
-      }
+      if (!lightbox.classList.contains("is-open")) return;
+      if (event.key === "Escape") cerrarLightbox();
+      if (event.key === "ArrowLeft") moverLightbox(-1);
+      if (event.key === "ArrowRight") moverLightbox(1);
     });
   }
 
   return lightbox;
 }
 
-function abrirLightbox(src, alt) {
+function abrirLightbox(index) {
   const lightbox = crearLightbox();
-  const img = lightbox.querySelector(".image-lightbox__image");
-  img.src = src;
-  img.alt = alt;
+  GALLERY_INDEX = index;
+  pintarLightbox();
   lightbox.classList.add("is-open");
   lightbox.setAttribute("aria-hidden", "false");
 }
 
-function bindImageZoom() {
-  document.querySelectorAll('[data-lightbox="true"]').forEach((image) => {
-    image.addEventListener("click", () => abrirLightbox(image.src, image.alt || "Imagen del bebé"));
-  });
+function seleccionarFoto(index) {
+  const hero = document.querySelector(".detail-gallery-hero img");
+  const thumbs = document.querySelectorAll(".gallery-thumb");
+  if (!hero || !GALLERY_PHOTOS[index]) return;
 
-  document.querySelectorAll(".detail-model-gallery img").forEach((image) => {
-    image.setAttribute("data-lightbox", "true");
-    image.addEventListener("click", () => abrirLightbox(image.src, image.alt || "Imagen del bebé"));
+  hero.classList.add("is-changing");
+  window.setTimeout(() => {
+    hero.src = GALLERY_PHOTOS[index].src;
+    hero.alt = GALLERY_PHOTOS[index].alt;
+    hero.classList.remove("is-changing");
+  }, 160);
+
+  thumbs.forEach((thumb, thumbIndex) => thumb.classList.toggle("is-active", thumbIndex === index));
+  const counter = document.querySelector(".detail-gallery-hero .gallery-counter");
+  if (counter) counter.textContent = `${index + 1} / ${GALLERY_PHOTOS.length}`;
+}
+
+function renderGaleria(fotos, nombreAlt) {
+  GALLERY_PHOTOS = fotos.map((src) => ({ src, alt: `Diseño ${nombreAlt}` }));
+  const hero = GALLERY_PHOTOS[0];
+  const secondary = GALLERY_PHOTOS.slice(1, 5);
+  const remaining = Math.max(0, GALLERY_PHOTOS.length - 5);
+  const bento = secondary.map((photo, index) => `
+    <button type="button" class="gallery-bento-item" data-gallery-index="${index + 1}" aria-label="Ampliar foto ${index + 2}">
+      <img src="${photo.src}" alt="${photo.alt}" loading="lazy">
+      ${index === secondary.length - 1 && remaining ? `<span class="gallery-bento-more">+${remaining}</span>` : ""}
+    </button>
+  `).join("");
+  const filmstrip = GALLERY_PHOTOS.map((photo, index) => `
+    <button type="button" class="gallery-thumb${index === 0 ? " is-active" : ""}" data-gallery-index="${index}" aria-label="Ver foto ${index + 1}">
+      <img src="${photo.src}" alt="${photo.alt}" loading="lazy">
+    </button>
+  `).join("");
+
+  return `
+    <div class="detail-model-gallery" data-count="${secondary.length}">
+      <button type="button" class="detail-gallery-hero" data-gallery-index="0" aria-label="Ampliar foto principal">
+        <img src="${hero.src}" alt="${hero.alt}">
+        <span class="gallery-zoom-hint">Ampliar ✦</span>
+        ${GALLERY_PHOTOS.length > 1 ? `<span class="gallery-counter">1 / ${GALLERY_PHOTOS.length}</span>` : ""}
+      </button>
+      ${GALLERY_PHOTOS.length > 1 ? `<div class="detail-gallery-bento">${bento}</div><div class="detail-gallery-filmstrip">${filmstrip}</div>` : ""}
+    </div>
+  `;
+}
+
+function bindGalleryEvents() {
+  document.querySelectorAll("[data-gallery-index]").forEach((element) => {
+    element.addEventListener("click", () => {
+      const index = Number(element.dataset.galleryIndex);
+      if (element.classList.contains("gallery-thumb")) seleccionarFoto(index);
+      else abrirLightbox(index);
+    });
   });
 }
 
@@ -125,26 +196,29 @@ function renderColeccion(modeloSeleccionado) {
 
   contenedor.classList.add("detail-layout--collection");
 
-  const galleryImages = fotosModelo.map((src) => `
-    <img src="${src}" alt="Diseño ${modeloSeleccionado}" loading="lazy" data-lightbox="true">
-  `).join("");
+  const talla = items[0]?.talla || "Talla estándar";
+  const material = items[0]?.material || "Vinilo reborn";
+  const certificacion = items[0]?.certificacion?.texto || "Certificado de autenticidad y calidad del material.";
 
   contenedor.innerHTML = `
     <section class="detail-collection">
-      <p class="eyebrow"><i></i><span>Diseños</span></p>
-      <div class="detail-model-header">
-        <div>
+      <div class="detail-collection-layout">
+        <div class="detail-collection-info">
+          <p class="eyebrow"><i></i><span>Diseños</span></p>
           <h1 class="detail-name">${modeloSeleccionado}</h1>
           <p class="detail-sub">${descripcionModelo}</p>
           <p class="detail-variation-note">El diseño de la tela varía.</p>
           <p class="detail-estimated-price">Precio estimado: ${precioEstimado}</p>
+          <button type="button" class="btn-primary" id="model-request-button">Quiero este bebé</button>
+          <dl class="detail-collection-specs">
+            <div><dt>Talla y peso</dt><dd>${talla}</dd></div>
+            <div><dt>Material</dt><dd>${material}</dd></div>
+          </dl>
+          <div class="detail-collection-cert"><span aria-hidden="true">✓</span><p>${certificacion}</p></div>
+          <a class="detail-back-link" href="index.html#catalogo">← Volver al catálogo</a>
         </div>
-        <button type="button" class="btn-primary" id="model-request-button">Quiero este bebé</button>
+        <div class="detail-collection-gallery">${renderGaleria(fotosModelo, modeloSeleccionado)}</div>
       </div>
-
-      <div class="detail-model-gallery">${galleryImages}</div>
-
-      <a class="btn-primary detail-back-collection-btn" href="index.html#catalogo">Volver al catálogo</a>
     </section>
   `;
 
@@ -153,7 +227,7 @@ function renderColeccion(modeloSeleccionado) {
     requestButton.addEventListener("click", () => abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel));
   }
 
-  bindImageZoom();
+  bindGalleryEvents();
 }
 
 const CATEGORY_LABELS = {
