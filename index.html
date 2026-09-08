@@ -6,7 +6,8 @@
 <title>Maternity Reborn Dolls | Bebés reborn hechos a mano</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
 <link rel="icon" type="image/png" href="assets/img/logotipo%20transparente.png">
 <link rel="stylesheet" href="assets/css/styles.css">
 </head>
@@ -20,7 +21,7 @@
   <nav class="navbar" id="inicio">
     <div class="navbar-inner">
       <a class="nav-logo" href="#inicio" aria-label="Maternity Reborn Dolls">
-        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo" width="500" height="500" decoding="async">
         <span>Maternity Reborn</span>
       </a>
       <div class="nav-links">
@@ -109,7 +110,7 @@
   </main>
 
   <section class="atelier-band">
-    <div class="atelier-image"><img src="assets/img/prematuros/Kit Tini Diseño Sorpresa.jpg" alt="Detalle de un bebé reborn terminado"></div>
+    <div class="atelier-image"><img src="assets/img/prematuros/Kit Tini Diseño Sorpresa.jpg" alt="Detalle de un bebé reborn terminado" width="960" height="1206" loading="lazy" decoding="async"></div>
     <div class="atelier-copy"><p class="eyebrow"><i></i>Desde el atelier</p><h2>Porque cada bebé<br><em>lleva una firma.</em></h2>
       <p>Aparta tu bebé con un anticipo de $200 MXN</p>
       <a href="#catalogo" class="text-link">Conoce las piezas <span class="arrow-icon" aria-hidden="true"></span></a>
@@ -163,7 +164,7 @@
   <footer class="site-footer">
     <div class="footer-brand-row">
       <div class="footer-brand">
-        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo" width="500" height="500" loading="lazy" decoding="async">
         <span>Maternity Reborn</span>
       </div>
 
@@ -182,9 +183,9 @@
     <p>&copy; <span id="anio-actual"></span> Maternity Reborn. Piezas de colección para mayores de 14 años.</p>
   </footer>
 
-  <script src="assets/js/datos.js?v=20260904"></script>
-  <script src="assets/js/catalogo.js?v=20260831"></script>
-  <script src="assets/js/catalogo-admin.js?v=20260905"></script>
+  <script defer src="assets/js/datos.js?v=20260904"></script>
+  <script defer src="assets/js/catalogo.js?v=20260831"></script>
+  <script defer src="assets/js/catalogo-admin.js?v=20260905"></script>
   <script>
     if ('scrollRestoration' in history) {
       history.scrollRestoration = 'auto';

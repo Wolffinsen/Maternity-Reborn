@@ -3,10 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive">
   <title>Panel administrativo | Maternity Reborn</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
   <link rel="icon" type="image/png" href="assets/img/logotipo%20transparente.png">
   <link rel="stylesheet" href="assets/css/styles.css">
 </head>
@@ -14,7 +16,7 @@
   <nav class="navbar admin-navbar">
     <div class="navbar-inner">
       <a class="nav-logo" href="index.html" aria-label="Maternity Reborn Dolls">
-        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo" width="500" height="500" decoding="async">
         <span>Maternity Reborn</span>
       </a>
       <a class="nav-cta" href="index.html">Volver al sitio</a>
@@ -100,13 +102,6 @@
         </div>
         <form id="change-password-form" class="admin-password-form">
           <div>
-            <label class="field-label" for="current-password">Contraseña actual</label>
-            <div class="password-input-wrap">
-              <input class="field-input" id="current-password" type="password" autocomplete="current-password" required>
-              <button class="password-toggle" type="button" data-password-target="current-password" aria-label="Mostrar contraseña">Mostrar</button>
-            </div>
-          </div>
-          <div>
             <label class="field-label" for="new-password">Nueva contraseña</label>
             <div class="password-input-wrap">
               <input class="field-input" id="new-password" type="password" autocomplete="new-password" minlength="8" required>
@@ -127,7 +122,7 @@
     </section>
   </main>
 
-  <script src="assets/js/datos.js"></script>
-  <script src="assets/js/admin.js"></script>
+  <script defer src="assets/js/datos.js"></script>
+  <script defer src="assets/js/admin.js"></script>
 </body>
 </html>

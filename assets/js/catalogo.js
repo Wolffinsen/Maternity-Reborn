@@ -23,40 +23,7 @@
   };
 
   function activarScrollSuave() {
-    const links = document.querySelectorAll('a[href^="#"]');
-
-    links.forEach((link) => {
-      link.addEventListener("click", (event) => {
-        const targetId = link.getAttribute("href");
-        if (!targetId || targetId === "#") return;
-
-        const target = document.querySelector(targetId);
-        if (!target) return;
-
-        event.preventDefault();
-
-        const top = target.getBoundingClientRect().top + window.scrollY - 90;
-        const start = window.scrollY;
-        const distance = top - start;
-        const duration = 700;
-        const startTime = performance.now();
-
-        function paso(timestamp) {
-          const progress = Math.min((timestamp - startTime) / duration, 1);
-          const eased = 1 - Math.pow(1 - progress, 3);
-          window.scrollTo({ top: start + distance * eased, behavior: "auto" });
-
-          if (progress < 1) {
-            requestAnimationFrame(paso);
-          } else {
-            window.scrollTo({ top, behavior: "auto" });
-            history.pushState(null, "", targetId);
-          }
-        }
-
-        requestAnimationFrame(paso);
-      });
-    });
+    // El desplazamiento nativo usa scroll-behavior y evita medir el layout en cada frame.
   }
 
   const grid = document.getElementById("catalogo-grid");
@@ -228,7 +195,7 @@
         <div class="tarjeta-imagen-wrap ${paletteClass}">
           ${badgeMarkup}
           <div class="tarjeta-badges">${categoriasHtml}</div>
-          <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" loading="lazy" data-lightbox="true" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
+          <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" width="1200" height="1600" loading="lazy" decoding="async" data-lightbox="true" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
         </div>
         <div class="tarjeta-info">
           <h3 class="tarjeta-nombre">${diseno.nombre}</h3>
@@ -254,7 +221,7 @@
           lightbox.innerHTML = `
             <div class="image-lightbox__panel">
               <button type="button" class="image-lightbox__close" aria-label="Cerrar vista ampliada">×</button>
-              <img class="image-lightbox__image" src="" alt="Vista ampliada" />
+              <img class="image-lightbox__image" src="" alt="Vista ampliada" width="1200" height="1600" decoding="async" />
             </div>
           `;
           document.body.appendChild(lightbox);

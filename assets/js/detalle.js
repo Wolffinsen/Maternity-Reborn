@@ -83,7 +83,7 @@ function crearLightbox() {
       <div class="image-lightbox__panel" role="dialog" aria-modal="true">
         <button type="button" class="image-lightbox__close" aria-label="Cerrar vista ampliada">×</button>
         <button type="button" class="image-lightbox__nav image-lightbox__nav--prev" aria-label="Foto anterior">‹</button>
-        <img class="image-lightbox__image" src="" alt="Vista ampliada" />
+        <img class="image-lightbox__image" src="" alt="Vista ampliada" width="1200" height="1600" decoding="async" />
         <button type="button" class="image-lightbox__nav image-lightbox__nav--next" aria-label="Foto siguiente">›</button>
         <p class="image-lightbox__counter" aria-live="polite"></p>
       </div>
@@ -144,20 +144,20 @@ function renderGaleria(fotos, nombreAlt) {
   const remaining = Math.max(0, GALLERY_PHOTOS.length - 5);
   const bento = secondary.map((photo, index) => `
     <button type="button" class="gallery-bento-item" data-gallery-index="${index + 1}" aria-label="Ampliar foto ${index + 2}">
-      <img src="${photo.src}" alt="${photo.alt}" loading="lazy">
+      <img src="${photo.src}" alt="${photo.alt}" width="1200" height="1600" loading="lazy" decoding="async">
       ${index === secondary.length - 1 && remaining ? `<span class="gallery-bento-more">+${remaining}</span>` : ""}
     </button>
   `).join("");
   const filmstrip = GALLERY_PHOTOS.map((photo, index) => `
     <button type="button" class="gallery-thumb${index === 0 ? " is-active" : ""}" data-gallery-index="${index}" aria-label="Ver foto ${index + 1}">
-      <img src="${photo.src}" alt="${photo.alt}" loading="lazy">
+      <img src="${photo.src}" alt="${photo.alt}" width="1200" height="1600" loading="lazy" decoding="async">
     </button>
   `).join("");
 
   return `
     <div class="detail-model-gallery" data-count="${secondary.length}">
       <button type="button" class="detail-gallery-hero" data-gallery-index="0" aria-label="Ampliar foto principal">
-        <img src="${hero.src}" alt="${hero.alt}">
+        <img src="${hero.src}" alt="${hero.alt}" width="1200" height="1600" decoding="async">
         <span class="gallery-zoom-hint">Ampliar ✦</span>
         ${GALLERY_PHOTOS.length > 1 ? `<span class="gallery-counter">1 / ${GALLERY_PHOTOS.length}</span>` : ""}
       </button>
@@ -267,7 +267,7 @@ function renderThumbs(fotos) {
       data-src="${src}"
       aria-label="Ver foto ${index + 1} del diseño"
     >
-      <img src="${src}" alt="Detalle del diseño ${index + 1}" loading="lazy">
+      <img src="${src}" alt="Detalle del diseño ${index + 1}" width="1200" height="1600" loading="lazy" decoding="async">
     </button>
   `).join("");
 
@@ -334,7 +334,7 @@ function renderVariantCards(variantesDisponibles, activeId) {
     const isActive = variant.id === activeId ? "is-active" : "";
     return `
       <a href="detalle.html?id=${variant.id}" class="variant-card ${isActive}" data-id="${variant.id}">
-        <img src="${preview}" alt="${variant.nombre} ${variant.diseno || "diseño"}">
+        <img src="${preview}" alt="${variant.nombre} ${variant.diseno || "diseño"}" width="1200" height="1600" loading="lazy" decoding="async">
         <div class="variant-card-body">
           <p class="variant-card-name">${variant.diseno || variant.subtitulo || "Diseño"}</p>
           <p class="variant-card-price">$${precio.toLocaleString("es-MX")} MXN</p>

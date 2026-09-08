@@ -288,7 +288,7 @@ const CATALOGO = [
 
 const CATALOGO_STORAGE_KEY = "maternityRebornCatalogo";
 const ADMIN_SESSION_KEY = "maternityRebornAdmin";
-const ADMIN_PASSWORD_SESSION_KEY = "maternityRebornAdminPassword";
+const ADMIN_TOKEN_SESSION_KEY = "maternityRebornAdminToken";
 let CATALOGO_REMOTE_CHANGED = false;
 
 function cargarCatalogoGuardado() {
@@ -336,14 +336,14 @@ async function cargarCatalogoRemoto() {
   }
 }
 
-async function guardarCatalogoRemoto(password) {
+async function guardarCatalogoRemoto(sessionToken) {
   if (!URL_APPS_SCRIPT) return { ok: false, error: "No hay conexión configurada con el servidor." };
 
   try {
     const response = await fetch(URL_APPS_SCRIPT, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ action: "saveCatalog", password, data: CATALOGO })
+      body: JSON.stringify({ action: "saveCatalog", sessionToken, data: CATALOGO })
     });
     const result = await response.json();
     if (!result.ok || result.action !== "saveCatalog") {
@@ -357,7 +357,14 @@ async function guardarCatalogoRemoto(password) {
 
 cargarCatalogoGuardado();
 
-const NUMERO_WHATSAPP = "5216692653343";
+const NUMERO_WHATSAPP = "5214423807369";
 const COSTO_APARTADO = 200;
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxwESaHUK2mrrFmKaT6gPB762awBtyuHIQfo2N7cENcrU-5quUUkJIg6tKmIUj5brTt/exec";
-const CATALOGO_READY = cargarCatalogoRemoto();
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbySrqVoFsPQpNVCT4zPaZbIwjJuXvhENOoYC-2TOwZMzgGzs63p0P16c09vjWnj1Gek/exec";
+const CATALOGO_READY = new Promise((resolve) => {
+  const cargarDespuesDelPrimerRender = () => cargarCatalogoRemoto().then(resolve);
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(cargarDespuesDelPrimerRender, { timeout: 2000 });
+  } else {
+    window.setTimeout(cargarDespuesDelPrimerRender, 0);
+  }
+});

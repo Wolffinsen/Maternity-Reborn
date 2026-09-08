@@ -1,7 +1,7 @@
 (function () {
   "use strict";
 
-  if (sessionStorage.getItem(ADMIN_SESSION_KEY) !== "true") return;
+  if (!sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY)) return;
 
   /* =========================================================
      CONFIGURA AQUÍ TU CUENTA GRATIS DE CLOUDINARY
@@ -172,7 +172,7 @@
 
     imageGallery.innerHTML = galleryImages.map((image, index) => `
       <article class="catalogo-admin-gallery-item${index === 0 ? " is-main" : ""}" draggable="true" data-image-index="${index}">
-        <img src="${image}" alt="Imagen ${index + 1}" onerror="this.style.opacity='0.35'">
+        <img src="${image}" alt="Imagen ${index + 1}" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0.35'">
         ${index === 0 ? '<span class="catalogo-admin-gallery-badge">Principal</span>' : '<button type="button" class="catalogo-admin-gallery-main" data-gallery-action="main">Hacer principal</button>'}
         <button type="button" class="catalogo-admin-gallery-remove" data-gallery-action="remove" aria-label="Eliminar imagen ${index + 1}">&times;</button>
         <span class="catalogo-admin-gallery-order">${index + 1}</span>
@@ -245,7 +245,7 @@
       return `
         <div class="catalogo-admin-card" data-id="${product.id}">
           <div class="catalogo-admin-card-image">
-            <img src="${product.imagen || ""}" alt="" onerror="this.style.opacity='0'">
+            <img src="${product.imagen || ""}" alt="" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0'">
             ${product.esNuevo ? '<span class="catalogo-admin-tag is-new">Nuevo</span>' : ""}
             <span class="catalogo-admin-tag ${disponible ? "is-available" : "is-unavailable"}">${disponible ? "Disponible" : "Apartado"}</span>
           </div>
@@ -286,7 +286,7 @@
     CATALOGO.splice(index, 1);
 
     const resultado = guardarCatalogo();
-    const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_PASSWORD_SESSION_KEY));
+    const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY));
     if (!resultado.ok || !remoto.ok) {
       CATALOGO.splice(0, CATALOGO.length, ...respaldo);
       guardarCatalogo();
@@ -352,7 +352,7 @@
       });
 
       const resultado = guardarCatalogo();
-      const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_PASSWORD_SESSION_KEY));
+      const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY));
       if (!resultado.ok || !remoto.ok) throw new Error(remoto.error || "No se pudo guardar el catálogo actualizado.");
 
       window.dispatchEvent(new Event("catalogo:render"));
@@ -447,7 +447,7 @@
       }
 
       const resultado = guardarCatalogo();
-      const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_PASSWORD_SESSION_KEY));
+      const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY));
       if (!resultado.ok || !remoto.ok) {
         CATALOGO.splice(0, CATALOGO.length, ...respaldo);
         guardarCatalogo();

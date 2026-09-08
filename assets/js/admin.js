@@ -10,11 +10,12 @@
   const tableBody = document.getElementById("admin-table-body");
   const clientSearchInput = document.getElementById("admin-client-search");
   const changePasswordForm = document.getElementById("change-password-form");
-  const currentPasswordInput = document.getElementById("current-password");
   const newPasswordInput = document.getElementById("new-password");
   const confirmPasswordInput = document.getElementById("confirm-password");
   const passwordChangeMessage = document.getElementById("password-change-message");
-  let adminPassword = "";
+  const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;
+  let adminToken = sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY) || "";
+  let inactivityTimer = null;
   let salesRows = [];
 
   const stats = {
@@ -28,11 +29,38 @@
     if (isAllowed) {
       guard.hidden = true;
       dashboard.hidden = false;
+      startInactivityTimer();
     } else {
       guard.hidden = false;
       dashboard.hidden = true;
-      adminPassword = "";
+      stopInactivityTimer();
     }
+  }
+
+  function startInactivityTimer() {
+    stopInactivityTimer();
+    inactivityTimer = window.setTimeout(() => {
+      logout("La sesión se cerró por inactividad.");
+    }, INACTIVITY_TIMEOUT_MS);
+  }
+
+  function stopInactivityTimer() {
+    if (inactivityTimer) window.clearTimeout(inactivityTimer);
+    inactivityTimer = null;
+  }
+
+  function registerActivity() {
+    if (adminToken) startInactivityTimer();
+  }
+
+  function logout(message) {
+    setAccess(false);
+    sessionStorage.removeItem(ADMIN_SESSION_KEY);
+    sessionStorage.removeItem(ADMIN_TOKEN_SESSION_KEY);
+    adminToken = "";
+    secretInput.value = "";
+    clearError();
+    if (message) showError(message);
   }
 
   function showError(message) {
@@ -69,13 +97,13 @@
     return response.json();
   }
 
-  async function changePassword(currentPassword, newPassword) {
+  async function changePassword(newPassword) {
     const response = await fetch(URL_APPS_SCRIPT, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify({
         action: "changeAdminPassword",
-        currentPassword,
+        sessionToken: adminToken,
         newPassword
       })
     });
@@ -155,7 +183,7 @@
         headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
           action: "updateSaleStatus",
-          password: adminPassword,
+          sessionToken: adminToken,
           folio: select.dataset.folio,
           estado: select.value
         })
@@ -193,16 +221,21 @@
       const response = await fetch(URL_APPS_SCRIPT, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action: "readSales", password: adminPassword })
+        body: JSON.stringify({ action: "readSales", sessionToken: adminToken })
       });
       const result = await response.json();
-      if (!result.ok) throw new Error(result.error || "No autorizado");
+      if (!result.ok) {
+        if (result.error === "No autorizado" || result.error?.includes("sesión")) logout("Tu sesión expiró. Inicia sesión nuevamente.");
+        throw new Error(result.error || "No autorizado");
+      }
       salesRows = Array.isArray(result?.data) ? result.data : [];
       renderStats(salesRows);
       renderFilteredRows();
+      return true;
     } catch (error) {
       console.error("No se pudo cargar la data del panel:", error);
       tableBody.innerHTML = '<tr><td colspan="7" class="table-empty">No se pudo cargar la información. Revisa la conexión con Google Sheets.</td></tr>';
+      return false;
     }
   }
 
@@ -229,14 +262,16 @@
       const result = await authenticate(candidate);
       if (result.action !== "authenticateAdmin") {
         showError("El servidor todavía usa una versión anterior. Actualiza la implementación de Apps Script.");
-      } else if (result.ok) {
-        adminPassword = candidate;
+      } else if (result.ok && result.sessionToken) {
+        adminToken = result.sessionToken;
         sessionStorage.setItem(ADMIN_SESSION_KEY, "true");
-        sessionStorage.setItem(ADMIN_PASSWORD_SESSION_KEY, candidate);
+        sessionStorage.setItem(ADMIN_TOKEN_SESSION_KEY, adminToken);
         setAccess(true);
         await fetchSalesData();
       } else {
-        showError("La contraseña es incorrecta.");
+        showError(result.ok
+          ? "El servidor todavía usa una versión anterior. Actualiza la implementación de Apps Script."
+          : (result.error || "La contraseña es incorrecta."));
       }
     } catch (error) {
       console.error("No se pudo verificar la contraseña:", error);
@@ -247,13 +282,7 @@
     }
   });
 
-  btnLogout.addEventListener("click", () => {
-    setAccess(false);
-    sessionStorage.removeItem(ADMIN_SESSION_KEY);
-    sessionStorage.removeItem(ADMIN_PASSWORD_SESSION_KEY);
-    secretInput.value = "";
-    clearError();
-  });
+  btnLogout.addEventListener("click", () => logout());
 
   secretInput.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
@@ -280,14 +309,13 @@
     submitButton.textContent = "Guardando...";
 
     try {
-      const result = await changePassword(currentPasswordInput.value, newPasswordInput.value);
+      const result = await changePassword(newPasswordInput.value);
       if (!result.ok || result.action !== "changeAdminPassword") {
+        if (result.error?.includes("sesión")) logout("Tu sesión expiró. Inicia sesión nuevamente.");
         showPasswordMessage(result.error || "La contraseña actual es incorrecta.", true);
         return;
       }
 
-      adminPassword = newPasswordInput.value;
-      sessionStorage.setItem(ADMIN_PASSWORD_SESSION_KEY, adminPassword);
       changePasswordForm.reset();
       showPasswordMessage("Contraseña actualizada correctamente.", false);
     } catch (error) {
@@ -299,5 +327,15 @@
     }
   });
 
+  ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((eventName) => {
+    document.addEventListener(eventName, registerActivity, { passive: true });
+  });
+
   setAccess(false);
+  if (adminToken) {
+    setAccess(true);
+    fetchSalesData().then((isValid) => {
+      if (!isValid) logout();
+    });
+  }
 })();

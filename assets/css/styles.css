@@ -90,6 +90,14 @@ html, body {
 
 img { max-width: 100%; display: block; }
 
+.how-it-works,
+.catalogo-wrapper,
+.atelier-band,
+.site-footer {
+  content-visibility: auto;
+  contain-intrinsic-size: 420px;
+}
+
 /* Navegacion */
 .navbar {
   position: sticky;

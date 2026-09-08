@@ -6,6 +6,7 @@
  * 2. Pega este archivo en Code.gs.
  * 3. En Configuración del proyecto > Propiedades del script crea:
  *    ADMIN_PASSWORD = una contraseña larga y privada.
+ *    La primera autenticación la migra automáticamente a hash + sal.
  * 4. Implementa como aplicación web: ejecutar como tú y acceso para cualquiera.
  * 5. Conserva la misma URL /exec en assets/js/datos.js.
  *
@@ -16,13 +17,18 @@
 
 const SALES_SHEET_NAME = "Ventas";
 const CATALOG_SHEET_NAME = "Catalogo";
+const ADMIN_SESSION_TTL_MS = 6 * 60 * 60 * 1000;
+const ADMIN_LOCKOUT_MS = 15 * 60 * 1000;
+const ADMIN_MAX_FAILED_ATTEMPTS = 5;
+const ADMIN_SESSIONS_PROPERTY = "ADMIN_SESSIONS";
+const ADMIN_LOGIN_STATE_PROPERTY = "ADMIN_LOGIN_STATE";
 
 function doPost(event) {
   try {
     const payload = JSON.parse(event.postData.contents || "{}");
 
     if (payload.action === "authenticateAdmin") {
-      return jsonResponse({ ok: isAdminPasswordValid(payload.password), action: "authenticateAdmin" });
+      return authenticateAdmin(payload.password);
     }
 
     if (payload.action === "changeAdminPassword") {
@@ -30,7 +36,7 @@ function doPost(event) {
     }
 
     if (payload.action === "readSales") {
-      if (!isAdminPasswordValid(payload.password)) {
+      if (!isAdminSessionValid(payload.sessionToken)) {
         return jsonResponse({ ok: false, error: "No autorizado" });
       }
 
@@ -60,16 +66,21 @@ function doGet() {
 }
 
 function isAdminPasswordValid(password) {
-  const configuredPassword = PropertiesService
-    .getScriptProperties()
-    .getProperty("ADMIN_PASSWORD");
+  const properties = PropertiesService.getScriptProperties();
+  const configuredHash = properties.getProperty("ADMIN_PASSWORD_HASH");
+  const configuredSalt = properties.getProperty("ADMIN_PASSWORD_SALT");
+  const legacyPassword = properties.getProperty("ADMIN_PASSWORD");
 
-  return Boolean(configuredPassword) && String(password || "") === configuredPassword;
+  if (configuredHash && configuredSalt) {
+    return hashesMatch(hashPassword(password, configuredSalt), configuredHash);
+  }
+
+  return Boolean(legacyPassword) && String(password || "") === legacyPassword;
 }
 
 function changeAdminPassword(payload) {
-  if (!isAdminPasswordValid(payload.currentPassword)) {
-    return jsonResponse({ ok: false, error: "La contraseña actual es incorrecta." });
+  if (!isAdminSessionValid(payload.sessionToken)) {
+    return jsonResponse({ ok: false, error: "La sesión expiró. Inicia sesión nuevamente." });
   }
 
   const newPassword = String(payload.newPassword || "");
@@ -77,8 +88,144 @@ function changeAdminPassword(payload) {
     return jsonResponse({ ok: false, error: "La nueva contraseña debe tener al menos 8 caracteres." });
   }
 
-  PropertiesService.getScriptProperties().setProperty("ADMIN_PASSWORD", newPassword);
+  const properties = PropertiesService.getScriptProperties();
+  const salt = createPasswordSalt();
+  properties.setProperties({
+    ADMIN_PASSWORD_HASH: hashPassword(newPassword, salt),
+    ADMIN_PASSWORD_SALT: salt
+  });
+  properties.deleteProperty("ADMIN_PASSWORD");
   return jsonResponse({ ok: true, action: "changeAdminPassword" });
+}
+
+function authenticateAdmin(password) {
+  const lock = LockService.getScriptLock();
+  lock.waitLock(5000);
+
+  try {
+    const properties = PropertiesService.getScriptProperties();
+    const loginState = getLoginState(properties);
+    const now = Date.now();
+
+    if (loginState.lockedUntil > now) {
+      return jsonResponse({
+        ok: false,
+        action: "authenticateAdmin",
+        error: "Demasiados intentos. Intenta nuevamente más tarde.",
+        retryAfterSeconds: Math.ceil((loginState.lockedUntil - now) / 1000)
+      });
+    }
+
+    if (!isAdminPasswordValid(password)) {
+      loginState.failedAttempts += 1;
+      if (loginState.failedAttempts >= ADMIN_MAX_FAILED_ATTEMPTS) {
+        loginState.lockedUntil = now + ADMIN_LOCKOUT_MS;
+        loginState.failedAttempts = 0;
+      }
+      properties.setProperty(ADMIN_LOGIN_STATE_PROPERTY, JSON.stringify(loginState));
+      return jsonResponse({
+        ok: false,
+        action: "authenticateAdmin",
+        error: loginState.lockedUntil > now
+          ? "Demasiados intentos. Intenta nuevamente más tarde."
+          : "La contraseña es incorrecta.",
+        retryAfterSeconds: loginState.lockedUntil > now ? Math.ceil((loginState.lockedUntil - now) / 1000) : 0
+      });
+    }
+
+    migrateLegacyPassword(properties, password);
+    loginState.failedAttempts = 0;
+    loginState.lockedUntil = 0;
+    properties.setProperty(ADMIN_LOGIN_STATE_PROPERTY, JSON.stringify(loginState));
+    return jsonResponse({
+      ok: true,
+      action: "authenticateAdmin",
+      sessionToken: createAdminSession(properties, now)
+    });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+function migrateLegacyPassword(properties, password) {
+  if (properties.getProperty("ADMIN_PASSWORD_HASH")) return;
+
+  const legacyPassword = properties.getProperty("ADMIN_PASSWORD");
+  if (!legacyPassword || String(password || "") !== legacyPassword) return;
+
+  const salt = createPasswordSalt();
+  properties.setProperties({
+    ADMIN_PASSWORD_HASH: hashPassword(password, salt),
+    ADMIN_PASSWORD_SALT: salt
+  });
+  properties.deleteProperty("ADMIN_PASSWORD");
+}
+
+function hashPassword(password, salt) {
+  const bytes = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    String(salt || "") + String(password || ""),
+    Utilities.Charset.UTF_8
+  );
+
+  return bytes.map(function (byte) {
+    return (byte < 0 ? byte + 256 : byte).toString(16).padStart(2, "0");
+  }).join("");
+}
+
+function hashesMatch(firstHash, secondHash) {
+  return String(firstHash || "") === String(secondHash || "");
+}
+
+function createPasswordSalt() {
+  return Utilities.getUuid() + Utilities.getUuid();
+}
+
+function getLoginState(properties) {
+  try {
+    const state = JSON.parse(properties.getProperty(ADMIN_LOGIN_STATE_PROPERTY) || "{}");
+    return {
+      failedAttempts: Number(state.failedAttempts) || 0,
+      lockedUntil: Number(state.lockedUntil) || 0
+    };
+  } catch (error) {
+    return { failedAttempts: 0, lockedUntil: 0 };
+  }
+}
+
+function getAdminSessions(properties) {
+  try {
+    return JSON.parse(properties.getProperty(ADMIN_SESSIONS_PROPERTY) || "{}");
+  } catch (error) {
+    return {};
+  }
+}
+
+function createAdminSession(properties, now) {
+  const sessions = getAdminSessions(properties);
+  Object.keys(sessions).forEach(function (token) {
+    if (Number(sessions[token]) <= now) delete sessions[token];
+  });
+
+  const token = Utilities.getUuid() + Utilities.getUuid();
+  sessions[token] = now + ADMIN_SESSION_TTL_MS;
+  properties.setProperty(ADMIN_SESSIONS_PROPERTY, JSON.stringify(sessions));
+  return token;
+}
+
+function isAdminSessionValid(token) {
+  if (!token) return false;
+
+  const properties = PropertiesService.getScriptProperties();
+  const sessions = getAdminSessions(properties);
+  const expiresAt = Number(sessions[String(token)] || 0);
+  if (!expiresAt) return false;
+  if (expiresAt <= Date.now()) {
+    delete sessions[String(token)];
+    properties.setProperty(ADMIN_SESSIONS_PROPERTY, JSON.stringify(sessions));
+    return false;
+  }
+  return true;
 }
 
 function createReservation(payload) {
@@ -128,7 +275,7 @@ function readSalesRows() {
 }
 
 function updateSaleStatus(payload) {
-  if (!isAdminPasswordValid(payload.password)) {
+  if (!isAdminSessionValid(payload.sessionToken)) {
     return jsonResponse({ ok: false, error: "No autorizado" });
   }
 
@@ -159,7 +306,7 @@ function updateSaleStatus(payload) {
 }
 
 function saveCatalog(payload) {
-  if (!isAdminPasswordValid(payload.password)) {
+  if (!isAdminSessionValid(payload.sessionToken)) {
     return jsonResponse({ ok: false, error: "No autorizado" });
   }
 

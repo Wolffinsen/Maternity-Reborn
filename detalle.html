@@ -6,14 +6,15 @@
   <title>Detalle | Maternity Reborn</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="preload" as="style" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"></noscript>
   <link rel="stylesheet" href="assets/css/styles.css?v=20260831">
 </head>
 <body class="detail-page">
   <nav class="navbar">
     <div class="navbar-inner">
       <a class="nav-logo" href="index.html" aria-label="Maternity Reborn Dolls">
-        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo">
+        <img src="assets/img/logotipo%20transparente.png" alt="Maternity Reborn Dolls logo" width="500" height="500" decoding="async">
         <span>Maternity Reborn</span>
       </a>
       <a class="nav-cta" href="index.html#catalogo">Volver al catálogo</a>
@@ -23,7 +24,7 @@
   <main class="detail-main" id="detalle">
     <div class="detail-layout">
       <section class="detail-gallery" aria-label="Galería del bebé">
-        <div class="detail-gallery-main photo-box"><img class="main-photo" id="detail-main-image" src="" alt=""></div>
+        <div class="detail-gallery-main photo-box"><img class="main-photo" id="detail-main-image" src="" alt="" width="1200" height="1600"></div>
         <div class="detail-thumbs" id="detail-thumbs"></div>
       </section>
       <section class="detail-info">
@@ -66,7 +67,7 @@
     </div>
   </main>
 
-  <script src="assets/js/datos.js?v=20260904"></script>
-  <script src="assets/js/detalle.js?v=20260904"></script>
+  <script defer src="assets/js/datos.js?v=20260904"></script>
+  <script defer src="assets/js/detalle.js?v=20260904"></script>
 </body>
 </html>
