@@ -353,13 +353,15 @@
      4. ARMAR MENSAJE Y ABRIR WHATSAPP
      --------------------------------------------------------- */
   function construirEnlaceWhatsapp(folio, nombreCliente, diseno) {
+    const referralLine = ReferralTracking.getWhatsappLine();
     const mensaje =
       `Hola, quiero apartar mi bebé\n\n` +
       `Diseño: ${diseno.nombre}\n` +
       `Folio: ${folio}\n` +
       `Precio del diseño: $${diseno.precio} MXN\n` +
       `Anticipo de apartado: $${COSTO_APARTADO} MXN\n` +
-      `Nombre: ${nombreCliente}`;
+      `Nombre: ${nombreCliente}` +
+      (referralLine ? `\n${referralLine}` : "");
 
     const mensajeCodificado = encodeURIComponent(mensaje);
     return `https://wa.me/${NUMERO_WHATSAPP}?text=${mensajeCodificado}`;

@@ -14,23 +14,27 @@ const requestBtn = document.getElementById("detail-request-button");
 function abrirWhatsappApartado(diseno) {
   const nombre = diseno?.nombre || "Bebé Reborn";
   const precio = Number(diseno?.precio ?? 0);
+  const referralLine = ReferralTracking.getWhatsappLine();
   const mensaje =
     `Hola, quiero apartar mi bebé 👶\n\n` +
     `Diseño: ${nombre}\n` +
     `Precio del diseño: $${precio.toLocaleString("es-MX")} MXN\n` +
     `Anticipo de apartado: $${COSTO_APARTADO} MXN\n` +
-    `Quiero reservarlo.`;
+    `Quiero reservarlo.` +
+    (referralLine ? `\n${referralLine}` : "");
 
   const enlaceWhatsapp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
   window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
 }
 
 function abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel) {
+  const referralLine = ReferralTracking.getWhatsappLine();
   const mensaje =
     `Hola, quiero apartar mi bebé 👶\n\n` +
     `Diseño: ${modeloSeleccionado}\n` +
     `Tipo de bebé: ${categoriaLabel}\n` +
-    `Quiero apartar este bebé y me gustaría recibir más información sobre sus opciones de diseño.`;
+    `Quiero apartar este bebé y me gustaría recibir más información sobre sus opciones de diseño.` +
+    (referralLine ? `\n${referralLine}` : "");
 
   const enlaceWhatsapp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
   window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
