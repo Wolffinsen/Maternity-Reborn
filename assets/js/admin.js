@@ -13,6 +13,12 @@
   const newPasswordInput = document.getElementById("new-password");
   const confirmPasswordInput = document.getElementById("confirm-password");
   const passwordChangeMessage = document.getElementById("password-change-message");
+  const referralForm = document.getElementById("referral-form");
+  const referralCodeInput = document.getElementById("referral-code");
+  const referralNameInput = document.getElementById("referral-name");
+  const referralCommissionInput = document.getElementById("referral-commission");
+  const referralMessage = document.getElementById("referral-message");
+  const referralList = document.getElementById("referral-list");
   const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;
   let adminToken = sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY) || "";
   let inactivityTimer = null;
@@ -76,6 +82,45 @@
     passwordChangeMessage.textContent = message;
     passwordChangeMessage.classList.toggle("is-success", !isError);
     passwordChangeMessage.hidden = false;
+  }
+
+  function showReferralMessage(message, isError) {
+    referralMessage.textContent = message;
+    referralMessage.classList.toggle("is-success", !isError);
+    referralMessage.hidden = false;
+  }
+
+  function renderReferralList() {
+    const sellers = Object.entries(ReferralTracking.getSellerRegistry());
+    if (!sellers.length) {
+      referralList.innerHTML = '<p class="table-empty">Todavía no hay vendedores registrados.</p>';
+      return;
+    }
+
+    referralList.innerHTML = sellers.map(([code, seller]) => `
+      <article class="referral-item">
+        <div>
+          <strong>${code}</strong>
+          <span>${seller.name} · ${seller.commissionPercent}% de comisión</span>
+          <small>${ReferralTracking.getReferralUrl(code)}</small>
+        </div>
+        <button class="referral-delete" type="button" data-referral-code="${code}">Eliminar</button>
+      </article>
+    `).join("");
+
+    referralList.querySelectorAll(".referral-delete").forEach((button) => {
+      button.addEventListener("click", () => {
+        if (!window.confirm(`¿Eliminar el código ${button.dataset.referralCode}?`)) return;
+        const result = ReferralTracking.deleteSeller(button.dataset.referralCode);
+        if (!result.ok) showReferralMessage(result.error, true);
+        else {
+          renderReferralList();
+          ReferralTracking.syncRegistry(adminToken).then((syncResult) => {
+            if (!syncResult.ok) showReferralMessage(`Guardado localmente. ${syncResult.error}`, true);
+          });
+        }
+      });
+    });
   }
 
   document.querySelectorAll(".password-toggle").forEach((toggle) => {
@@ -327,11 +372,34 @@
     }
   });
 
+  referralForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const result = ReferralTracking.saveSeller({
+      code: referralCodeInput.value,
+      name: referralNameInput.value,
+      commissionPercent: referralCommissionInput.value
+    });
+    if (!result.ok) {
+      showReferralMessage(result.error, true);
+      return;
+    }
+    referralForm.reset();
+    showReferralMessage("Vendedor guardado localmente. Sincronizando...", false);
+    renderReferralList();
+    const syncResult = await ReferralTracking.syncRegistry(adminToken);
+    showReferralMessage(syncResult.ok
+      ? "Vendedor guardado y sincronizado correctamente."
+      : `Guardado localmente. ${syncResult.error}`, !syncResult.ok);
+  });
+
+  window.addEventListener("referral:updated", renderReferralList);
+
   ["click", "keydown", "mousemove", "scroll", "touchstart"].forEach((eventName) => {
     document.addEventListener(eventName, registerActivity, { passive: true });
   });
 
   setAccess(false);
+  renderReferralList();
   if (adminToken) {
     setAccess(true);
     fetchSalesData().then((isValid) => {

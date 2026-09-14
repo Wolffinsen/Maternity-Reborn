@@ -22,6 +22,7 @@ const ADMIN_LOCKOUT_MS = 15 * 60 * 1000;
 const ADMIN_MAX_FAILED_ATTEMPTS = 5;
 const ADMIN_SESSIONS_PROPERTY = "ADMIN_SESSIONS";
 const ADMIN_LOGIN_STATE_PROPERTY = "ADMIN_LOGIN_STATE";
+const REFERRAL_REGISTRY_PROPERTY = "REFERRAL_REGISTRY";
 
 function doPost(event) {
   try {
@@ -41,6 +42,14 @@ function doPost(event) {
       }
 
       return jsonResponse({ ok: true, data: readSalesRows() });
+    }
+
+    if (payload.action === "readReferralCodes") {
+      return jsonResponse({ ok: true, action: "readReferralCodes", data: readReferralCodes() });
+    }
+
+    if (payload.action === "saveReferralCodes") {
+      return saveReferralCodes(payload);
     }
 
     if (payload.action === "readCatalog") {
@@ -96,6 +105,30 @@ function changeAdminPassword(payload) {
   });
   properties.deleteProperty("ADMIN_PASSWORD");
   return jsonResponse({ ok: true, action: "changeAdminPassword" });
+}
+
+function readReferralCodes() {
+  const raw = PropertiesService.getScriptProperties().getProperty(REFERRAL_REGISTRY_PROPERTY);
+  try {
+    const registry = JSON.parse(raw || "{}");
+    return registry && typeof registry === "object" && !Array.isArray(registry) ? registry : {};
+  } catch (error) {
+    return {};
+  }
+}
+
+function saveReferralCodes(payload) {
+  if (!isAdminSessionValid(payload.sessionToken)) {
+    return jsonResponse({ ok: false, error: "No autorizado" });
+  }
+
+  const registry = payload.registry;
+  if (!registry || typeof registry !== "object" || Array.isArray(registry)) {
+    return jsonResponse({ ok: false, error: "El registro de referencias no es válido." });
+  }
+
+  PropertiesService.getScriptProperties().setProperty(REFERRAL_REGISTRY_PROPERTY, JSON.stringify(registry));
+  return jsonResponse({ ok: true, action: "saveReferralCodes" });
 }
 
 function authenticateAdmin(password) {

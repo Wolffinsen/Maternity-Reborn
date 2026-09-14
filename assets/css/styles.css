@@ -1780,6 +1780,49 @@ tbody td {
   letter-spacing: 0.02em;
 }
 
+.admin-panel-note {
+  margin: -4px 0 18px;
+  color: var(--color-text-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.referral-form {
+  display: grid;
+  grid-template-columns: 1fr 1.4fr .8fr auto;
+  gap: 14px;
+  align-items: end;
+}
+
+.referral-form .field-label { margin-top: 0; }
+.referral-form .btn-primary { width: auto; margin: 0; white-space: nowrap; }
+.referral-form .admin-error { grid-column: 1 / -1; margin: 0; text-align: left; }
+.referral-list { display: grid; gap: 10px; margin-top: 20px; }
+.referral-item { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 13px 14px; border: 1px solid var(--color-line); border-radius: 12px; background: var(--color-bg); }
+.referral-item strong, .referral-item span, .referral-item small { display: block; }
+.referral-item strong { color: var(--color-wine); letter-spacing: .08em; }
+.referral-item span { margin-top: 4px; font-size: 13px; }
+.referral-item small { margin-top: 5px; color: var(--color-text-soft); font-size: 11px; overflow-wrap: anywhere; }
+.referral-delete { border: 0; background: transparent; color: #b42318; cursor: pointer; font: 700 12px var(--font-body); }
+
+.whatsapp-widget { position: fixed; right: 22px; bottom: 22px; z-index: 2100; display: inline-flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-radius: 999px; background: #168c5b; color: #fff; box-shadow: 0 12px 28px rgba(22, 92, 61, .28); text-decoration: none; transition: transform .2s ease, background .2s ease; }
+.whatsapp-widget:hover { background: #107248; transform: translateY(-2px); }
+.whatsapp-widget__label { font: 700 12px var(--font-body); }
+.whatsapp-widget__icon { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.18); font-size: 18px; }
+
+@media (max-width: 880px) {
+  .referral-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .referral-form .btn-primary { width: 100%; }
+}
+
+@media (max-width: 640px) {
+  .referral-form { grid-template-columns: 1fr; }
+  .referral-item { align-items: flex-start; flex-direction: column; }
+  .referral-delete { padding: 0; }
+  .whatsapp-widget { right: 14px; bottom: 14px; }
+  .whatsapp-widget__label { display: none; }
+}
+
 /* Pie de pagina */
 .site-footer {
   text-align: center;

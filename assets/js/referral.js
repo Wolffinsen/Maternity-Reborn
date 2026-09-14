@@ -1,22 +1,24 @@
 /*
- * Referral attribution foundation.
+ * Base de atribución por referencia.
  *
- * Add seller codes to SELLER_REFERRAL_CODES when the seller registry is ready:
+ * Agrega códigos a SELLER_REFERRAL_CODES cuando necesites una configuración fija:
  * {
  *   SELLER_CODE: { name: "Seller name", commissionPercent: 10 }
  * }
- * Keep the seller code as the object key; names and commission percentages are
- * metadata for a future backend/dashboard and are not trusted as sale proof.
+ * El código es la clave; el nombre y el porcentaje son datos para un futuro
+ * backend o panel y no sustituyen la confirmación de una venta.
  */
 (function (window) {
   "use strict";
 
   const REFERRAL_STORAGE_KEY = "maternityRebornReferral";
+  const SELLER_REGISTRY_STORAGE_KEY = "maternityRebornSellerRegistry";
   const REFERRAL_QUERY_PARAM = "ref";
   const REFERRAL_CODE_PATTERN = /^[A-Z0-9_-]{2,64}$/;
+  let remoteRegistry = {};
 
-  // TODO: Add each seller's unique code, name, and commission percentage here.
-  // TODO: Move this registry to the backend/API when confirmed sales are tracked.
+  // TODO: Agrega aquí códigos, nombres y porcentajes si deseas una configuración fija.
+  // TODO: Migra este registro a la API/base de datos al confirmar ventas.
   const SELLER_REFERRAL_CODES = {
     // SELLER_CODE: { name: "Seller name", commissionPercent: 10 }
   };
@@ -25,13 +27,26 @@
     return String(value || "").trim().toUpperCase();
   }
 
+    function leerRegistro() {
+      try {
+        const guardado = JSON.parse(window.localStorage.getItem(SELLER_REGISTRY_STORAGE_KEY) || "null");
+        return guardado && typeof guardado === "object" && !Array.isArray(guardado) ? guardado : {};
+      } catch (error) {
+        return {};
+      }
+    }
+
+    function obtenerRegistroCompleto() {
+      return { ...SELLER_REFERRAL_CODES, ...remoteRegistry, ...leerRegistro() };
+    }
+
   function codigoValido(value) {
     const code = normalizarCodigo(value);
     if (!REFERRAL_CODE_PATTERN.test(code)) return false;
 
-    // Until a seller registry exists, the format check keeps this foundation usable.
-    // Once codes are configured, only registered sellers are accepted.
-    const registeredCodes = Object.keys(SELLER_REFERRAL_CODES);
+    // Mientras no exista un registro, la validación de formato mantiene activa la base.
+    // Cuando se agregan códigos, solo se aceptan vendedores registrados.
+      const registeredCodes = Object.keys(obtenerRegistroCompleto());
     return registeredCodes.length === 0 || registeredCodes.includes(code);
   }
 
@@ -50,7 +65,7 @@
         capturedAt: new Date().toISOString()
       }));
     } catch (error) {
-      // Browsers can block storage; the current-page attribution still works.
+      // Algunos navegadores bloquean el almacenamiento; la página actual sigue funcionando.
     }
   }
 
@@ -73,12 +88,97 @@
     return code ? `Código de referencia: ${code}` : "";
   }
 
+  function guardarVendedor({ code, name, commissionPercent }) {
+    const normalizedCode = normalizarCodigo(code);
+    const normalizedName = String(name || "").trim();
+    const percentage = Number(commissionPercent);
+    if (!REFERRAL_CODE_PATTERN.test(normalizedCode)) {
+      return { ok: false, error: "El código debe tener entre 2 y 64 caracteres alfanuméricos." };
+    }
+    if (!normalizedName) return { ok: false, error: "Escribe el nombre del vendedor." };
+    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
+      return { ok: false, error: "El porcentaje debe estar entre 0 y 100." };
+    }
+
+    const registry = leerRegistro();
+    registry[normalizedCode] = { name: normalizedName, commissionPercent: percentage };
+    try {
+      window.localStorage.setItem(SELLER_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
+      return { ok: true, code: normalizedCode };
+    } catch (error) {
+      return { ok: false, error: "No se pudo guardar el vendedor en este navegador." };
+    }
+  }
+
+  function eliminarVendedor(code) {
+    const normalizedCode = normalizarCodigo(code);
+    const registry = leerRegistro();
+    if (!registry[normalizedCode]) return { ok: false, error: "El vendedor no existe." };
+    delete registry[normalizedCode];
+    try {
+      window.localStorage.setItem(SELLER_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
+      return { ok: true };
+    } catch (error) {
+      return { ok: false, error: "No se pudo actualizar el registro en este navegador." };
+    }
+  }
+
+  function obtenerEnlaceReferencia(code) {
+    const url = new URL("index.html", window.location.href);
+    url.searchParams.set(REFERRAL_QUERY_PARAM, normalizarCodigo(code));
+    return url.href;
+  }
+
+  async function cargarRegistroRemoto() {
+    if (typeof URL_APPS_SCRIPT === "undefined" || !URL_APPS_SCRIPT) return;
+    try {
+      const response = await fetch(URL_APPS_SCRIPT, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action: "readReferralCodes" })
+      });
+      const result = await response.json();
+      if (result.ok && result.action === "readReferralCodes" && result.data) {
+        remoteRegistry = result.data;
+        window.dispatchEvent(new Event("referral:updated"));
+      }
+    } catch (error) {
+      console.warn("No se pudo cargar el registro de referencias:", error);
+    }
+  }
+
+  async function sincronizarRegistro(sessionToken) {
+    if (typeof URL_APPS_SCRIPT === "undefined" || !URL_APPS_SCRIPT) {
+      return { ok: false, error: "No hay conexión configurada con el servidor." };
+    }
+    try {
+      const response = await fetch(URL_APPS_SCRIPT, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "saveReferralCodes",
+          sessionToken,
+          registry: leerRegistro()
+        })
+      });
+      return response.json();
+    } catch (error) {
+      return { ok: false, error: "No se pudo sincronizar el registro de referencias." };
+    }
+  }
+
   // TODO: Send referral attribution and confirmed-sale events to your backend/API here.
   window.ReferralTracking = {
     getCode: obtenerCodigo,
     getWhatsappLine: obtenerLineaWhatsapp,
-    getSellerRegistry: () => ({ ...SELLER_REFERRAL_CODES })
+    getSellerRegistry: obtenerRegistroCompleto,
+    saveSeller: guardarVendedor,
+    deleteSeller: eliminarVendedor,
+    getReferralUrl: obtenerEnlaceReferencia,
+    syncRegistry: sincronizarRegistro,
+    loadRemoteRegistry: cargarRegistroRemoto
   };
 
   capturarDesdeUrl();
+  cargarRegistroRemoto();
 })(window);
