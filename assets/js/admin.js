@@ -17,12 +17,21 @@
   const referralCodeInput = document.getElementById("referral-code");
   const referralNameInput = document.getElementById("referral-name");
   const referralCommissionInput = document.getElementById("referral-commission");
+  const referralSubmit = document.getElementById("referral-submit");
+  const referralCancel = document.getElementById("referral-cancel");
   const referralMessage = document.getElementById("referral-message");
   const referralList = document.getElementById("referral-list");
+  const pagination = document.getElementById("admin-pagination");
+  const previousPageButton = document.getElementById("btn-previous-page");
+  const nextPageButton = document.getElementById("btn-next-page");
+  const pageStatus = document.getElementById("admin-page-status");
   const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;
+  const SALES_PAGE_SIZE = 10;
   let adminToken = sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY) || "";
   let inactivityTimer = null;
   let salesRows = [];
+  let salesPage = 1;
+  let editingReferralCode = "";
 
   const stats = {
     vendidos: document.getElementById("stat-vendidos"),
@@ -104,7 +113,10 @@
           <span>${seller.name} · ${seller.commissionPercent}% de comisión</span>
           <small>${ReferralTracking.getReferralUrl(code)}</small>
         </div>
-        <button class="referral-delete" type="button" data-referral-code="${code}">Eliminar</button>
+        <div class="referral-actions">
+          <button class="referral-edit" type="button" data-referral-code="${code}">Editar</button>
+          <button class="referral-delete" type="button" data-referral-code="${code}">Eliminar</button>
+        </div>
       </article>
     `).join("");
 
@@ -121,6 +133,27 @@
         }
       });
     });
+
+    referralList.querySelectorAll(".referral-edit").forEach((button) => {
+      button.addEventListener("click", () => {
+        const seller = ReferralTracking.getSellerRegistry()[button.dataset.referralCode];
+        if (!seller) return;
+        editingReferralCode = button.dataset.referralCode;
+        referralCodeInput.value = editingReferralCode;
+        referralNameInput.value = seller.name || "";
+        referralCommissionInput.value = seller.commissionPercent ?? "";
+        referralSubmit.textContent = "Actualizar vendedor";
+        referralCancel.hidden = false;
+        referralCodeInput.focus();
+      });
+    });
+  }
+
+  function cancelReferralEdit() {
+    editingReferralCode = "";
+    referralForm.reset();
+    referralSubmit.textContent = "Guardar vendedor";
+    referralCancel.hidden = true;
   }
 
   document.querySelectorAll(".password-toggle").forEach((toggle) => {
@@ -215,7 +248,14 @@
       return searchableText.includes(search);
     });
 
-    renderRows(filteredRows);
+    const totalPages = Math.max(1, Math.ceil(filteredRows.length / SALES_PAGE_SIZE));
+    salesPage = Math.min(salesPage, totalPages);
+    const start = (salesPage - 1) * SALES_PAGE_SIZE;
+    renderRows(filteredRows.slice(start, start + SALES_PAGE_SIZE));
+    pagination.hidden = filteredRows.length <= SALES_PAGE_SIZE;
+    pageStatus.textContent = `Página ${salesPage} de ${totalPages}`;
+    previousPageButton.disabled = salesPage === 1;
+    nextPageButton.disabled = salesPage === totalPages;
   }
 
   async function updateSaleStatus(select) {
@@ -284,7 +324,20 @@
     }
   }
 
-  clientSearchInput.addEventListener("input", renderFilteredRows);
+  clientSearchInput.addEventListener("input", () => {
+    salesPage = 1;
+    renderFilteredRows();
+  });
+  previousPageButton.addEventListener("click", () => {
+    if (salesPage > 1) {
+      salesPage -= 1;
+      renderFilteredRows();
+    }
+  });
+  nextPageButton.addEventListener("click", () => {
+    salesPage += 1;
+    renderFilteredRows();
+  });
 
   btnAccess.addEventListener("click", async () => {
     const candidate = secretInput.value.trim();
@@ -377,13 +430,14 @@
     const result = ReferralTracking.saveSeller({
       code: referralCodeInput.value,
       name: referralNameInput.value,
-      commissionPercent: referralCommissionInput.value
+      commissionPercent: referralCommissionInput.value,
+      previousCode: editingReferralCode
     });
     if (!result.ok) {
       showReferralMessage(result.error, true);
       return;
     }
-    referralForm.reset();
+    cancelReferralEdit();
     showReferralMessage("Vendedor guardado localmente. Sincronizando...", false);
     renderReferralList();
     const syncResult = await ReferralTracking.syncRegistry(adminToken);
@@ -391,6 +445,8 @@
       ? "Vendedor guardado y sincronizado correctamente."
       : `Guardado localmente. ${syncResult.error}`, !syncResult.ok);
   });
+
+  referralCancel.addEventListener("click", cancelReferralEdit);
 
   window.addEventListener("referral:updated", renderReferralList);
 

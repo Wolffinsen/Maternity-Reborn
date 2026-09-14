@@ -94,6 +94,11 @@
             </tbody>
           </table>
         </div>
+        <div class="admin-pagination" id="admin-pagination" hidden>
+          <button class="btn-secondary" id="btn-previous-page" type="button" aria-label="Ver folios anteriores">← Anteriores</button>
+          <span id="admin-page-status" aria-live="polite"></span>
+          <button class="btn-secondary" id="btn-next-page" type="button" aria-label="Ver folios siguientes">Siguientes →</button>
+        </div>
       </div>
 
       <div class="admin-panel admin-referral-panel">
@@ -114,7 +119,8 @@
             <label class="field-label" for="referral-commission">Comisión (%)</label>
             <input class="field-input" id="referral-commission" type="number" min="0" max="100" step="0.01" placeholder="Ej. 10" required>
           </div>
-          <button class="btn-primary" type="submit">Guardar vendedor</button>
+          <button class="btn-primary" id="referral-submit" type="submit">Guardar vendedor</button>
+          <button class="btn-secondary" id="referral-cancel" type="button" hidden>Cancelar edición</button>
           <p class="admin-error" id="referral-message" role="status" hidden></p>
         </form>
         <div class="referral-list" id="referral-list"></div>

@@ -27,6 +27,15 @@
     return String(value || "").trim().toUpperCase();
   }
 
+  function crearSlug(value) {
+    return String(value || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
     function leerRegistro() {
       try {
         const guardado = JSON.parse(window.localStorage.getItem(SELLER_REGISTRY_STORAGE_KEY) || "null");
@@ -76,11 +85,26 @@
 
   function capturarDesdeUrl() {
     const code = normalizarCodigo(new URLSearchParams(window.location.search).get(REFERRAL_QUERY_PARAM));
-    if (!codigoValido(code)) return;
+    if (codigoValido(code)) {
+      // First-touch attribution is the default. Change this rule here if later
+      // campaigns should replace an existing referral.
+      if (!obtenerCodigo()) guardarCodigo(code);
+      return;
+    }
+
+    const pathSlug = window.location.pathname
+      .split("/")
+      .filter(Boolean)
+      .pop();
+    if (!pathSlug || pathSlug === "index.html" || pathSlug === "admin.html") return;
+
+    const seller = Object.entries(obtenerRegistroCompleto())
+      .find(([, data]) => crearSlug(data.name) === crearSlug(pathSlug));
+    if (!seller || obtenerCodigo()) return;
 
     // First-touch attribution is the default. Change this rule here if later
     // campaigns should replace an existing referral.
-    if (!obtenerCodigo()) guardarCodigo(code);
+    guardarCodigo(seller[0]);
   }
 
   function obtenerLineaWhatsapp() {
@@ -88,8 +112,9 @@
     return code ? `Código de referencia: ${code}` : "";
   }
 
-  function guardarVendedor({ code, name, commissionPercent }) {
+  function guardarVendedor({ code, name, commissionPercent, previousCode = "" }) {
     const normalizedCode = normalizarCodigo(code);
+    const normalizedPreviousCode = normalizarCodigo(previousCode);
     const normalizedName = String(name || "").trim();
     const percentage = Number(commissionPercent);
     if (!REFERRAL_CODE_PATTERN.test(normalizedCode)) {
@@ -100,7 +125,13 @@
       return { ok: false, error: "El porcentaje debe estar entre 0 y 100." };
     }
 
-    const registry = leerRegistro();
+    const registry = obtenerRegistroCompleto();
+    if (normalizedCode !== normalizedPreviousCode && registry[normalizedCode]) {
+      return { ok: false, error: "Ese código ya está registrado." };
+    }
+    if (normalizedPreviousCode && normalizedPreviousCode !== normalizedCode) {
+      delete registry[normalizedPreviousCode];
+    }
     registry[normalizedCode] = { name: normalizedName, commissionPercent: percentage };
     try {
       window.localStorage.setItem(SELLER_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
@@ -124,8 +155,11 @@
   }
 
   function obtenerEnlaceReferencia(code) {
-    const url = new URL("index.html", window.location.href);
-    url.searchParams.set(REFERRAL_QUERY_PARAM, normalizarCodigo(code));
+    const normalizedCode = normalizarCodigo(code);
+    const seller = obtenerRegistroCompleto()[normalizedCode];
+    const slug = crearSlug(seller?.name) || crearSlug(normalizedCode);
+    const baseUrl = new URL(".", window.location.href);
+    const url = new URL(`${slug}/`, baseUrl);
     return url.href;
   }
 
@@ -140,6 +174,7 @@
       const result = await response.json();
       if (result.ok && result.action === "readReferralCodes" && result.data) {
         remoteRegistry = result.data;
+        capturarDesdeUrl();
         window.dispatchEvent(new Event("referral:updated"));
       }
     } catch (error) {

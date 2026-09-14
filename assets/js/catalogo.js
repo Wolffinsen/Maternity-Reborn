@@ -326,7 +326,9 @@
     try {
       const respuesta = await fetch(URL_APPS_SCRIPT, {
         method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
         body: JSON.stringify({
+          action: "createReservation",
           diseno: diseno.nombre,
           precio: diseno.precio,
           nombreCliente: nombreCliente,

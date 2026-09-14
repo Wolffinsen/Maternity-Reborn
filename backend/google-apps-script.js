@@ -64,7 +64,11 @@ function doPost(event) {
       return updateSaleStatus(payload);
     }
 
-    return createReservation(payload);
+    if (payload.action === "createReservation") {
+      return createReservation(payload);
+    }
+
+    return jsonResponse({ ok: false, error: "Acción no válida." });
   } catch (error) {
     return jsonResponse({ ok: false, error: error.message });
   }
@@ -262,6 +266,14 @@ function isAdminSessionValid(token) {
 }
 
 function createReservation(payload) {
+  const nombreCliente = String(payload.nombreCliente || "").trim();
+  const telefonoCliente = String(payload.telefonoCliente || "").trim();
+  const diseno = String(payload.diseno || "").trim();
+  const precio = Number(payload.precio);
+  if (!nombreCliente || !telefonoCliente || !diseno || !Number.isFinite(precio) || precio <= 0) {
+    return jsonResponse({ ok: false, error: "Los datos de la reserva están incompletos." });
+  }
+
   const sheet = getSalesSheet();
   const headers = ensureHeaders(sheet);
   const folio = createFolio(sheet, headers);
@@ -270,10 +282,10 @@ function createReservation(payload) {
     switch (normalizeHeader(header)) {
       case "fecha": return now;
       case "folio": return folio;
-      case "cliente": return payload.nombreCliente || "";
-      case "telefono": return payload.telefonoCliente || "";
-      case "diseno": return payload.diseno || "";
-      case "precio": return payload.precio || "";
+      case "cliente": return nombreCliente;
+      case "telefono": return telefonoCliente;
+      case "diseno": return diseno;
+      case "precio": return precio;
       case "estado": return "activo";
       default: return "";
     }
@@ -290,7 +302,6 @@ function readSalesRows() {
 
   const headers = values[0];
   return values.slice(1)
-    .filter(function (row) { return row.some(function (value) { return value !== ""; }); })
     .map(function (row, index) {
       return {
         rowNumber: index + 2,
@@ -302,8 +313,12 @@ function readSalesRows() {
         fecha: formatDate(getCell(row, headers, ["fecha", "timestamp", "fechadeapartado"]))
       };
     })
+    .filter(function (row) {
+      return row.folio || row.cliente || row.telefono || row.diseno || row.precio || row.fecha;
+    })
     .sort(function (first, second) {
-      return String(second.fecha).localeCompare(String(first.fecha));
+      const dateOrder = String(second.fecha).localeCompare(String(first.fecha));
+      return dateOrder || second.rowNumber - first.rowNumber;
     });
 }
 

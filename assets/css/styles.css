@@ -1703,6 +1703,11 @@ tbody td {
   padding: 22px 12px;
 }
 
+.admin-pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; }
+.admin-pagination .btn-secondary { width: auto; margin: 0; padding: 8px 12px; }
+.admin-pagination span { min-width: 100px; color: var(--color-text-soft); font-size: 13px; text-align: center; }
+.admin-pagination .btn-secondary:disabled { opacity: .45; cursor: not-allowed; }
+
 .status-badge {
   display: inline-flex;
   align-items: center;
@@ -1803,7 +1808,10 @@ tbody td {
 .referral-item strong { color: var(--color-wine); letter-spacing: .08em; }
 .referral-item span { margin-top: 4px; font-size: 13px; }
 .referral-item small { margin-top: 5px; color: var(--color-text-soft); font-size: 11px; overflow-wrap: anywhere; }
-.referral-delete { border: 0; background: transparent; color: #b42318; cursor: pointer; font: 700 12px var(--font-body); }
+.referral-actions { display: flex; align-items: center; gap: 12px; }
+.referral-edit, .referral-delete { border: 0; background: transparent; cursor: pointer; font: 700 12px var(--font-body); }
+.referral-edit { color: var(--color-wine); }
+.referral-delete { color: #b42318; }
 
 .whatsapp-widget { position: fixed; right: 22px; bottom: 22px; z-index: 2100; display: inline-flex; align-items: center; gap: 10px; padding: 10px 12px 10px 16px; border-radius: 999px; background: #168c5b; color: #fff; box-shadow: 0 12px 28px rgba(22, 92, 61, .28); text-decoration: none; transition: transform .2s ease, background .2s ease; }
 .whatsapp-widget:hover { background: #107248; transform: translateY(-2px); }
@@ -1818,7 +1826,8 @@ tbody td {
 @media (max-width: 640px) {
   .referral-form { grid-template-columns: 1fr; }
   .referral-item { align-items: flex-start; flex-direction: column; }
-  .referral-delete { padding: 0; }
+  .referral-actions { width: 100%; justify-content: flex-start; }
+  .referral-edit, .referral-delete { padding: 0; }
   .whatsapp-widget { right: 14px; bottom: 14px; }
   .whatsapp-widget__label { display: none; }
 }
