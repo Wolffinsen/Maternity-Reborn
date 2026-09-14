@@ -11,33 +11,128 @@ const thumbs = document.getElementById("detail-thumbs");
 const variantCards = document.getElementById("detail-variants");
 const requestBtn = document.getElementById("detail-request-button");
 
-function abrirWhatsappApartado(diseno) {
+function crearModalReservaDetalle() {
+  let modal = document.getElementById("detail-reservation-modal");
+  if (modal) return modal;
+
+  modal = document.createElement("div");
+  modal.id = "detail-reservation-modal";
+  modal.className = "modal-overlay";
+  modal.hidden = true;
+  modal.innerHTML = `
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="detail-reservation-title">
+      <button type="button" class="modal-close" data-detail-reservation-close aria-label="Cerrar">×</button>
+      <p class="eyebrow"><i></i>Reserva</p>
+      <h2 class="modal-title" id="detail-reservation-title">Quiero este bebé</h2>
+      <p class="modal-price" data-detail-reservation-price></p>
+      <form data-detail-reservation-form>
+        <label class="field-label" for="detail-reservation-name">Tu nombre</label>
+        <input class="field-input" id="detail-reservation-name" name="nombre" required autocomplete="name">
+        <label class="field-label" for="detail-reservation-phone">Tu teléfono</label>
+        <input class="field-input" id="detail-reservation-phone" name="telefono" required autocomplete="tel" inputmode="tel">
+        <p class="modal-note">Generaremos un folio y registraremos tu apartado antes de abrir WhatsApp.</p>
+        <button class="btn-primary" type="submit">Generar folio</button>
+        <p class="admin-error" data-detail-reservation-message role="alert" hidden></p>
+      </form>
+      <div data-detail-reservation-success hidden>
+        <p class="modal-note">Tu folio es:</p>
+        <p class="folio-display" data-detail-reservation-folio></p>
+        <a class="btn-primary" data-detail-reservation-whatsapp target="_blank" rel="noopener noreferrer">Continuar por WhatsApp</a>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  const close = () => {
+    modal.hidden = true;
+    document.body.style.overflow = "";
+  };
+  modal.querySelector("[data-detail-reservation-close]").addEventListener("click", close);
+  modal.addEventListener("click", (event) => {
+    if (event.target === modal) close();
+  });
+  return modal;
+}
+
+function construirEnlaceWhatsapp(folio, nombreCliente, telefonoCliente, diseno, categoriaLabel) {
   const nombre = diseno?.nombre || "Bebé Reborn";
   const precio = Number(diseno?.precio ?? 0);
   const referralLine = ReferralTracking.getWhatsappLine();
   const mensaje =
     `Hola, quiero apartar mi bebé 👶\n\n` +
+    `Folio: ${folio}\n` +
     `Diseño: ${nombre}\n` +
     `Precio del diseño: $${precio.toLocaleString("es-MX")} MXN\n` +
     `Anticipo de apartado: $${COSTO_APARTADO} MXN\n` +
-    `Quiero reservarlo.` +
+    `Tipo de bebé: ${categoriaLabel || "No especificado"}\n` +
+    `Nombre: ${nombreCliente}\n` +
+    `Teléfono: ${telefonoCliente}` +
     (referralLine ? `\n${referralLine}` : "");
 
-  const enlaceWhatsapp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
-  window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
+  return `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
 }
 
-function abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel) {
-  const referralLine = ReferralTracking.getWhatsappLine();
-  const mensaje =
-    `Hola, quiero apartar mi bebé 👶\n\n` +
-    `Diseño: ${modeloSeleccionado}\n` +
-    `Tipo de bebé: ${categoriaLabel}\n` +
-    `Quiero apartar este bebé y me gustaría recibir más información sobre sus opciones de diseño.` +
-    (referralLine ? `\n${referralLine}` : "");
+function abrirFormularioReserva(diseno, categoriaLabel) {
+  const modal = crearModalReservaDetalle();
+  const form = modal.querySelector("[data-detail-reservation-form]");
+  const success = modal.querySelector("[data-detail-reservation-success]");
+  const message = modal.querySelector("[data-detail-reservation-message]");
+  const submit = form.querySelector("button[type=submit]");
 
-  const enlaceWhatsapp = `https://wa.me/${NUMERO_WHATSAPP}?text=${encodeURIComponent(mensaje)}`;
-  window.open(enlaceWhatsapp, "_blank", "noopener,noreferrer");
+  modal.querySelector("[data-detail-reservation-price]").textContent = `$${Number(diseno?.precio || 0).toLocaleString("es-MX")} MXN · ${diseno?.nombre || "Bebé Reborn"}`;
+  form.reset();
+  form.hidden = false;
+  success.hidden = true;
+  message.hidden = true;
+  modal.hidden = false;
+  document.body.style.overflow = "hidden";
+
+  form.onsubmit = async (event) => {
+    event.preventDefault();
+    if (!URL_APPS_SCRIPT) {
+      message.textContent = "No hay conexión configurada para generar el folio.";
+      message.hidden = false;
+      return;
+    }
+
+    submit.disabled = true;
+    submit.textContent = "Generando folio...";
+    message.hidden = true;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch(URL_APPS_SCRIPT, {
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          action: "createReservation",
+          diseno: diseno?.nombre || "Bebé Reborn",
+          precio: Number(diseno?.precio || 0),
+          nombreCliente: formData.get("nombre"),
+          telefonoCliente: formData.get("telefono")
+        })
+      });
+      const result = await response.json();
+      if (!result.ok || !result.folio) throw new Error(result.error || "No se pudo generar el folio.");
+
+      modal.querySelector("[data-detail-reservation-folio]").textContent = result.folio;
+      modal.querySelector("[data-detail-reservation-whatsapp]").href = construirEnlaceWhatsapp(
+        result.folio,
+        formData.get("nombre"),
+        formData.get("telefono"),
+        diseno,
+        categoriaLabel
+      );
+      form.hidden = true;
+      success.hidden = false;
+    } catch (error) {
+      message.textContent = error.message || "No se pudo generar el folio. Intenta nuevamente.";
+      message.hidden = false;
+    } finally {
+      submit.disabled = false;
+      submit.textContent = "Generar folio";
+    }
+  };
 }
 
 let GALLERY_PHOTOS = [];
@@ -228,10 +323,14 @@ function renderColeccion(modeloSeleccionado) {
 
   const requestButton = document.getElementById("model-request-button");
   if (requestButton) {
-    requestButton.addEventListener("click", () => abrirWhatsappPorModelo(modeloSeleccionado, categoriaLabel));
+    requestButton.addEventListener("click", () => abrirFormularioReserva(items[0], categoriaLabel));
   }
 
   bindGalleryEvents();
+}
+
+if (requestBtn) {
+  requestBtn.addEventListener("click", () => abrirFormularioReserva(bebe, CATEGORY_LABELS[bebe?.categorias?.[0]] || ""));
 }
 
 const CATEGORY_LABELS = {

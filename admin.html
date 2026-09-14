@@ -42,7 +42,7 @@
       <div class="admin-header">
         <div>
           <p class="eyebrow"><i></i>Resumen</p>
-          <h2>Ventas y apartados</h2>
+          <h2>Panel de control</h2>
         </div>
         <button class="btn-secondary" id="btn-admin-logout" type="button">Cerrar sesión</button>
       </div>
@@ -66,47 +66,94 @@
         </article>
       </div>
 
-      <div class="admin-panel">
-        <div class="panel-heading">
-          <h3>Folio / apartados</h3>
-        </div>
-        <div class="admin-search-field">
-          <label class="search-label" for="admin-client-search">Buscar cliente</label>
-          <input class="field-input" id="admin-client-search" type="search" placeholder="Nombre, folio o diseño">
-        </div>
-        <div class="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Folio</th>
-                <th>Cliente</th>
-                <th>Diseño</th>
-                <th>Precio</th>
-                <th>Estado</th>
-                <th>Fecha</th>
-                <th>Actualizar</th>
-              </tr>
-            </thead>
-            <tbody id="admin-table-body">
-              <tr>
-                <td colspan="6" class="table-empty">Cargando datos...</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div class="admin-pagination" id="admin-pagination" hidden>
-          <button class="btn-secondary" id="btn-previous-page" type="button" aria-label="Ver folios anteriores">← Anteriores</button>
-          <span id="admin-page-status" aria-live="polite"></span>
-          <button class="btn-secondary" id="btn-next-page" type="button" aria-label="Ver folios siguientes">Siguientes →</button>
-        </div>
-      </div>
+      <nav class="admin-tabs" role="tablist" aria-label="Secciones del panel">
+        <button class="admin-tab is-active" type="button" role="tab" aria-selected="true" aria-controls="admin-sales-view" data-admin-tab="admin-sales-view">Ventas</button>
+        <button class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="admin-referrals-view" data-admin-tab="admin-referrals-view">Referidos</button>
+        <button class="admin-tab" type="button" role="tab" aria-selected="false" aria-controls="admin-settings-view" data-admin-tab="admin-settings-view">Configuración</button>
+      </nav>
 
-      <div class="admin-panel admin-referral-panel">
-        <div class="panel-heading">
-          <h3>Códigos de referencia</h3>
+      <section class="admin-view is-active" id="admin-sales-view" role="tabpanel">
+        <div class="admin-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow"><i></i>Operación</p>
+              <h3>Folios y apartados</h3>
+            </div>
+          </div>
+          <div class="admin-search-field">
+            <label class="search-label" for="admin-client-search">Buscar cliente</label>
+            <input class="field-input" id="admin-client-search" type="search" placeholder="Nombre, folio o diseño">
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Folio</th><th>Cliente</th><th>Diseño</th><th>Precio</th><th>Estado</th><th>Fecha</th><th>Actualizar</th></tr>
+              </thead>
+              <tbody id="admin-table-body"><tr><td colspan="7" class="table-empty">Cargando datos...</td></tr></tbody>
+            </table>
+          </div>
+          <div class="admin-sales-cards" id="admin-sales-cards"></div>
+          <div class="admin-pagination" id="admin-pagination" hidden>
+            <button class="btn-secondary" id="btn-previous-page" type="button" aria-label="Ver folios anteriores">← Anteriores</button>
+            <span id="admin-page-status" aria-live="polite"></span>
+            <button class="btn-secondary" id="btn-next-page" type="button" aria-label="Ver folios siguientes">Siguientes →</button>
+          </div>
         </div>
-        <p class="admin-panel-note">Agrega vendedores para crear enlaces únicos y reconocer su referencia en WhatsApp.</p>
-        <form id="referral-form" class="referral-form">
+      </section>
+
+      <section class="admin-view" id="admin-referrals-view" role="tabpanel" hidden>
+        <div class="admin-panel admin-referral-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow"><i></i>Atribución</p>
+              <h3>Vendedores referidos</h3>
+            </div>
+            <button class="btn-primary admin-new-referral" id="btn-new-referral" type="button">+ Nuevo vendedor</button>
+          </div>
+          <div class="referral-toolbar">
+            <p class="admin-panel-note">Enlaces listos para compartir y métricas preparadas para cuando se conecte el seguimiento de ventas.</p>
+            <input class="field-input" id="admin-referral-search" type="search" placeholder="Buscar vendedor o código" aria-label="Buscar vendedor o código">
+          </div>
+          <div class="referral-list" id="referral-list"></div>
+        </div>
+      </section>
+
+      <section class="admin-view" id="admin-settings-view" role="tabpanel" hidden>
+        <div class="admin-panel admin-password-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow"><i></i>Seguridad</p>
+              <h3>Cambiar contraseña</h3>
+            </div>
+          </div>
+          <form id="change-password-form" class="admin-password-form">
+            <div>
+              <label class="field-label" for="new-password">Nueva contraseña</label>
+              <div class="password-input-wrap">
+                <input class="field-input" id="new-password" type="password" autocomplete="new-password" minlength="8" required>
+                <button class="password-toggle" type="button" data-password-target="new-password" aria-label="Mostrar contraseña">Mostrar</button>
+              </div>
+            </div>
+            <div>
+              <label class="field-label" for="confirm-password">Confirmar contraseña</label>
+              <div class="password-input-wrap">
+                <input class="field-input" id="confirm-password" type="password" autocomplete="new-password" minlength="8" required>
+                <button class="password-toggle" type="button" data-password-target="confirm-password" aria-label="Mostrar contraseña">Mostrar</button>
+              </div>
+            </div>
+            <button class="btn-primary" type="submit">Guardar nueva contraseña</button>
+            <p class="admin-error" id="password-change-message" role="status" hidden></p>
+          </form>
+        </div>
+      </section>
+    </section>
+
+    <div class="catalogo-admin-modal" id="referral-modal" hidden>
+      <div class="catalogo-admin-dialog" role="dialog" aria-modal="true" aria-labelledby="referral-modal-title">
+        <button class="modal-close" id="referral-modal-close" type="button" aria-label="Cerrar">×</button>
+        <p class="eyebrow"><i></i>Nuevo enlace</p>
+        <h2 id="referral-modal-title">Agregar vendedor</h2>
+        <form id="referral-form" class="referral-modal-form">
           <div>
             <label class="field-label" for="referral-code">Código</label>
             <input class="field-input" id="referral-code" type="text" maxlength="64" placeholder="Ej. MARIA10" required>
@@ -123,33 +170,11 @@
           <button class="btn-secondary" id="referral-cancel" type="button" hidden>Cancelar edición</button>
           <p class="admin-error" id="referral-message" role="status" hidden></p>
         </form>
-        <div class="referral-list" id="referral-list"></div>
       </div>
-
-      <div class="admin-panel admin-password-panel">
-        <div class="panel-heading">
-          <h3>Cambiar contraseña</h3>
-        </div>
-        <form id="change-password-form" class="admin-password-form">
-          <div>
-            <label class="field-label" for="new-password">Nueva contraseña</label>
-            <div class="password-input-wrap">
-              <input class="field-input" id="new-password" type="password" autocomplete="new-password" minlength="8" required>
-              <button class="password-toggle" type="button" data-password-target="new-password" aria-label="Mostrar contraseña">Mostrar</button>
-            </div>
-          </div>
-          <div>
-            <label class="field-label" for="confirm-password">Confirmar contraseña</label>
-            <div class="password-input-wrap">
-              <input class="field-input" id="confirm-password" type="password" autocomplete="new-password" minlength="8" required>
-              <button class="password-toggle" type="button" data-password-target="confirm-password" aria-label="Mostrar contraseña">Mostrar</button>
-            </div>
-          </div>
-          <button class="btn-primary" type="submit">Guardar nueva contraseña</button>
-          <p class="admin-error" id="password-change-message" role="status" hidden></p>
-        </form>
-      </div>
-    </section>
+    <div class="anticipo-toast admin-toast" id="admin-toast" role="status" aria-live="polite" aria-atomic="true">
+      <div class="anticipo-toast__content"><strong id="admin-toast-title">Actualizado</strong><p id="admin-toast-message"></p></div>
+      <button class="anticipo-toast__close" id="admin-toast-close" type="button">Cerrar</button>
+    </div>
   </main>
 
   <script defer src="assets/js/datos.js"></script>

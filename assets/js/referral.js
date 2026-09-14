@@ -156,10 +156,8 @@
 
   function obtenerEnlaceReferencia(code) {
     const normalizedCode = normalizarCodigo(code);
-    const seller = obtenerRegistroCompleto()[normalizedCode];
-    const slug = crearSlug(seller?.name) || crearSlug(normalizedCode);
-    const baseUrl = new URL(".", window.location.href);
-    const url = new URL(`${slug}/`, baseUrl);
+    const url = new URL("/index.html", window.location.origin);
+    url.searchParams.set(REFERRAL_QUERY_PARAM, normalizedCode);
     return url.href;
   }
 

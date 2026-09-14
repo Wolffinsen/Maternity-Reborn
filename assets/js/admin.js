@@ -21,6 +21,16 @@
   const referralCancel = document.getElementById("referral-cancel");
   const referralMessage = document.getElementById("referral-message");
   const referralList = document.getElementById("referral-list");
+  const referralSearchInput = document.getElementById("admin-referral-search");
+  const referralModal = document.getElementById("referral-modal");
+  const referralModalTitle = document.getElementById("referral-modal-title");
+  const newReferralButton = document.getElementById("btn-new-referral");
+  const referralModalClose = document.getElementById("referral-modal-close");
+  const salesCards = document.getElementById("admin-sales-cards");
+  const adminToast = document.getElementById("admin-toast");
+  const adminToastTitle = document.getElementById("admin-toast-title");
+  const adminToastMessage = document.getElementById("admin-toast-message");
+  const adminToastClose = document.getElementById("admin-toast-close");
   const pagination = document.getElementById("admin-pagination");
   const previousPageButton = document.getElementById("btn-previous-page");
   const nextPageButton = document.getElementById("btn-next-page");
@@ -32,6 +42,7 @@
   let salesRows = [];
   let salesPage = 1;
   let editingReferralCode = "";
+  let toastTimer = null;
 
   const stats = {
     vendidos: document.getElementById("stat-vendidos"),
@@ -99,26 +110,80 @@
     referralMessage.hidden = false;
   }
 
+  function showToast(title, message, isError = false) {
+    adminToastTitle.textContent = title;
+    adminToastMessage.textContent = message;
+    adminToast.classList.toggle("is-error", isError);
+    adminToast.classList.add("is-visible");
+    window.clearTimeout(toastTimer);
+    toastTimer = window.setTimeout(() => adminToast.classList.remove("is-visible"), 4200);
+  }
+
+  function escapeHtml(value) {
+    return String(value || "").replace(/[&<>'"]/g, (character) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", "'": "&#39;", '"': "&quot;"
+    }[character]));
+  }
+
+  function getSellerInitials(name) {
+    return String(name || "V")
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "V";
+  }
+
   function renderReferralList() {
-    const sellers = Object.entries(ReferralTracking.getSellerRegistry());
+    const search = referralSearchInput.value.trim().toLowerCase();
+    const sellers = Object.entries(ReferralTracking.getSellerRegistry()).filter(([code, seller]) =>
+      `${code} ${seller.name || ""}`.toLowerCase().includes(search));
     if (!sellers.length) {
-      referralList.innerHTML = '<p class="table-empty">Todavía no hay vendedores registrados.</p>';
+      referralList.innerHTML = `<div class="admin-empty-state">
+        <span class="admin-empty-icon" aria-hidden="true">↗</span>
+        <strong>${search ? "No encontramos vendedores" : "Aún no hay vendedores"}</strong>
+        <p>${search ? "Prueba con otro nombre o código." : "Crea el primer enlace para empezar a atribuir tus ventas."}</p>
+        ${search ? "" : '<button class="btn-primary" type="button" data-empty-new-referral>+ Nuevo vendedor</button>'}
+      </div>`;
+      referralList.querySelector("[data-empty-new-referral]")?.addEventListener("click", openReferralModal);
       return;
     }
 
     referralList.innerHTML = sellers.map(([code, seller]) => `
-      <article class="referral-item">
-        <div>
-          <strong>${code}</strong>
-          <span>${seller.name} · ${seller.commissionPercent}% de comisión</span>
-          <small>${ReferralTracking.getReferralUrl(code)}</small>
+      <article class="referral-card">
+        <div class="referral-card-top">
+          <span class="referral-avatar">${escapeHtml(getSellerInitials(seller.name))}</span>
+          <span class="referral-commission">${escapeHtml(seller.commissionPercent)}% comisión</span>
         </div>
-        <div class="referral-actions">
-          <button class="referral-edit" type="button" data-referral-code="${code}">Editar</button>
-          <button class="referral-delete" type="button" data-referral-code="${code}">Eliminar</button>
+        <div class="referral-card-info">
+          <span class="referral-seller-name">${escapeHtml(seller.name)}</span>
+          <strong class="referral-code">${escapeHtml(code)}</strong>
+        </div>
+        <div class="referral-metrics">
+          <span><small>Ventas atribuidas</small><strong>Próximamente</strong></span>
+          <span><small>Ganancia acumulada</small><strong>Próximamente</strong></span>
+        </div>
+        <div class="referral-card-actions">
+          <button class="referral-copy" type="button" data-referral-code="${escapeHtml(code)}">Copiar link</button>
+          <button class="referral-edit" type="button" data-referral-code="${escapeHtml(code)}" aria-label="Editar ${escapeHtml(seller.name)}">Editar</button>
+          <button class="referral-delete" type="button" data-referral-code="${escapeHtml(code)}" aria-label="Eliminar ${escapeHtml(seller.name)}">Eliminar</button>
         </div>
       </article>
     `).join("");
+
+    referralList.querySelectorAll(".referral-copy").forEach((button) => {
+      button.addEventListener("click", async () => {
+        const url = ReferralTracking.getReferralUrl(button.dataset.referralCode);
+        try {
+          await navigator.clipboard.writeText(url);
+          button.textContent = "Copiado";
+          showToast("Enlace copiado", "Ya puedes compartir el link del vendedor.");
+          window.setTimeout(() => { button.textContent = "Copiar link"; }, 1800);
+        } catch (error) {
+          window.prompt("Copia este enlace de referencia:", url);
+        }
+      });
+    });
 
     referralList.querySelectorAll(".referral-delete").forEach((button) => {
       button.addEventListener("click", () => {
@@ -127,8 +192,9 @@
         if (!result.ok) showReferralMessage(result.error, true);
         else {
           renderReferralList();
+          showToast("Vendedor eliminado", "El código se quitó de este navegador.");
           ReferralTracking.syncRegistry(adminToken).then((syncResult) => {
-            if (!syncResult.ok) showReferralMessage(`Guardado localmente. ${syncResult.error}`, true);
+            if (!syncResult.ok) showToast("Guardado localmente", syncResult.error, true);
           });
         }
       });
@@ -144,9 +210,22 @@
         referralCommissionInput.value = seller.commissionPercent ?? "";
         referralSubmit.textContent = "Actualizar vendedor";
         referralCancel.hidden = false;
+        referralModalTitle.textContent = "Editar vendedor";
+        referralModal.hidden = false;
         referralCodeInput.focus();
       });
     });
+  }
+
+  function openReferralModal() {
+    referralModalTitle.textContent = editingReferralCode ? "Editar vendedor" : "Agregar vendedor";
+    referralModal.hidden = false;
+    referralCodeInput.focus();
+  }
+
+  function closeReferralModal() {
+    referralModal.hidden = true;
+    cancelReferralEdit();
   }
 
   function cancelReferralEdit() {
@@ -154,6 +233,7 @@
     referralForm.reset();
     referralSubmit.textContent = "Guardar vendedor";
     referralCancel.hidden = true;
+    referralModalTitle.textContent = "Agregar vendedor";
   }
 
   document.querySelectorAll(".password-toggle").forEach((toggle) => {
@@ -214,6 +294,7 @@
   function renderRows(rows) {
     if (!rows.length) {
       tableBody.innerHTML = '<tr><td colspan="7" class="table-empty">No hay folios registrados todavía.</td></tr>';
+      salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">◎</span><strong>No hay folios todavía</strong><p>Los nuevos apartados aparecerán aquí.</p></div>';
       return;
     }
 
@@ -234,7 +315,18 @@
       </tr>
     `).join("");
 
+    salesCards.innerHTML = rows.map((row) => `
+      <article class="sale-card">
+        <div class="sale-card-heading"><strong>${row.folio}</strong><span class="status-badge ${row.estado === "vendido" ? "is-sold" : "is-active"}">${row.estado === "vendido" ? "Vendido" : "Activo"}</span></div>
+        <dl><div><dt>Cliente</dt><dd>${row.cliente || "—"}</dd></div><div><dt>Diseño</dt><dd>${row.diseno || "—"}</dd></div><div><dt>Precio</dt><dd>${formatMoney(row.precio)}</dd></div><div><dt>Fecha</dt><dd>${row.fecha || "—"}</dd></div></dl>
+        <select class="status-select" data-folio="${row.folio}" aria-label="Cambiar estado de ${row.folio}"><option value="activo" ${row.estado === "activo" ? "selected" : ""}>Activo</option><option value="vendido" ${row.estado === "vendido" ? "selected" : ""}>Vendido</option></select>
+      </article>
+    `).join("");
+
     tableBody.querySelectorAll(".status-select").forEach((select) => {
+      select.addEventListener("change", () => updateSaleStatus(select));
+    });
+    salesCards.querySelectorAll(".status-select").forEach((select) => {
       select.addEventListener("change", () => updateSaleStatus(select));
     });
   }
@@ -320,6 +412,7 @@
     } catch (error) {
       console.error("No se pudo cargar la data del panel:", error);
       tableBody.innerHTML = '<tr><td colspan="7" class="table-empty">No se pudo cargar la información. Revisa la conexión con Google Sheets.</td></tr>';
+      salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">!</span><strong>No se pudo cargar la información</strong><p>Revisa la conexión con Google Sheets.</p></div>';
       return false;
     }
   }
@@ -427,6 +520,8 @@
 
   referralForm.addEventListener("submit", async (event) => {
     event.preventDefault();
+    referralSubmit.disabled = true;
+    referralSubmit.textContent = editingReferralCode ? "Actualizando..." : "Guardando...";
     const result = ReferralTracking.saveSeller({
       code: referralCodeInput.value,
       name: referralNameInput.value,
@@ -435,18 +530,41 @@
     });
     if (!result.ok) {
       showReferralMessage(result.error, true);
+      referralSubmit.disabled = false;
+      referralSubmit.textContent = editingReferralCode ? "Actualizar vendedor" : "Guardar vendedor";
       return;
     }
-    cancelReferralEdit();
-    showReferralMessage("Vendedor guardado localmente. Sincronizando...", false);
+    closeReferralModal();
+    showToast("Vendedor guardado", "El enlace está listo. Sincronizando...");
     renderReferralList();
     const syncResult = await ReferralTracking.syncRegistry(adminToken);
-    showReferralMessage(syncResult.ok
-      ? "Vendedor guardado y sincronizado correctamente."
-      : `Guardado localmente. ${syncResult.error}`, !syncResult.ok);
+    showToast(syncResult.ok ? "Vendedor sincronizado" : "Guardado localmente", syncResult.ok ? "El registro remoto está actualizado." : syncResult.error, !syncResult.ok);
+    referralSubmit.disabled = false;
+    referralSubmit.textContent = "Guardar vendedor";
   });
 
-  referralCancel.addEventListener("click", cancelReferralEdit);
+  referralCancel.addEventListener("click", closeReferralModal);
+  newReferralButton.addEventListener("click", openReferralModal);
+  referralModalClose.addEventListener("click", closeReferralModal);
+  referralModal.addEventListener("click", (event) => {
+    if (event.target === referralModal) closeReferralModal();
+  });
+  adminToastClose.addEventListener("click", () => adminToast.classList.remove("is-visible"));
+  referralSearchInput.addEventListener("input", renderReferralList);
+  document.querySelectorAll("[data-admin-tab]").forEach((tab) => {
+    tab.addEventListener("click", () => {
+      document.querySelectorAll("[data-admin-tab]").forEach((item) => {
+        const isActive = item === tab;
+        item.classList.toggle("is-active", isActive);
+        item.setAttribute("aria-selected", String(isActive));
+      });
+      document.querySelectorAll(".admin-view").forEach((view) => {
+        const isActive = view.id === tab.dataset.adminTab;
+        view.classList.toggle("is-active", isActive);
+        view.hidden = !isActive;
+      });
+    });
+  });
 
   window.addEventListener("referral:updated", renderReferralList);
 

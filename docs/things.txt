@@ -2,4 +2,4 @@ Deployment ID
 AKfycbziHnzeHKmQ8dEAw_3aFTCPqzjQvCqQEeLvMLqb2c-hBfwXPJSxq68QpdGGNBMzaseF
 
 URL
-https://script.google.com/macros/s/AKfycbxjQiDnp6Li-d98gQmKGnidq3oNKniU_v2YchsfSM-O8lNWlfYlNpVROSxVxNfDFpTb/exec
+https://script.google.com/macros/s/AKfycbxVJQYQ6Rn2z6tBmFHiFDVQxCxK6WgcYr5V09ZlXCMw0OA9Qf3oHqLhfKk4BEUgf4aM/exec
