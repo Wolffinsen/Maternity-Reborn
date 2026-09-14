@@ -2541,6 +2541,36 @@ body { background: var(--color-bg); }
   .atelier-copy { padding: 58px 20px 68px; }
 }
 
+.badge.promocion {
+  background: #b86b45;
+  color: var(--color-white);
+}
+
+.detail-badge-promotion {
+  background: rgba(184, 107, 69, .14);
+  color: #a25532;
+}
+
+.catalogo-admin-category-control {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.catalogo-admin-category-control .btn-secondary {
+  width: auto;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.catalogo-admin-tag.is-promotion {
+  top: 8px;
+  right: 8px;
+  background: #b86b45;
+  color: var(--color-white);
+}
+
 /* Panel administrativo: navegación por vistas y tarjetas responsive */
 .admin-tabs {
   display: flex;

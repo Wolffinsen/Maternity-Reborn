@@ -109,7 +109,19 @@
 
   function obtenerLineaWhatsapp() {
     const code = obtenerCodigo();
-    return code ? `Código de referencia: ${code}` : "";
+    const seller = obtenerRegistroCompleto()[code];
+    return code
+      ? `Referencia: ${seller?.name || code} (código ${code})`
+      : "";
+  }
+
+  function obtenerAtribucion() {
+    const code = obtenerCodigo();
+    const seller = obtenerRegistroCompleto()[code];
+    return {
+      code,
+      sellerName: seller?.name || ""
+    };
   }
 
   function guardarVendedor({ code, name, commissionPercent, previousCode = "" }) {
@@ -204,6 +216,7 @@
   window.ReferralTracking = {
     getCode: obtenerCodigo,
     getWhatsappLine: obtenerLineaWhatsapp,
+    getAttribution: obtenerAtribucion,
     getSellerRegistry: obtenerRegistroCompleto,
     saveSeller: guardarVendedor,
     deleteSeller: eliminarVendedor,

@@ -9,7 +9,8 @@
   disponible = true,
   talla,
   material = "Vinilo reborn",
-  esNuevo = false
+  esNuevo = false,
+  esOferta = false
 }) {
   return {
     id,
@@ -20,6 +21,7 @@
     imagen,
     disponible,
     esNuevo,
+    esOferta,
     subtitulo: `${categoria.replace(/_/g, " ")} · ${nombre}`,
     talla: talla || "Talla estándar",
     material,
@@ -360,7 +362,7 @@ cargarCatalogoGuardado();
 // TODO: Configure the business WhatsApp number here before publishing.
 const NUMERO_WHATSAPP = "5214423807369";
 const COSTO_APARTADO = 200;
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxVJQYQ6Rn2z6tBmFHiFDVQxCxK6WgcYr5V09ZlXCMw0OA9Qf3oHqLhfKk4BEUgf4aM/exec";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyopEDWOlnSbF9TewXbeQNbCWwHfF_fnLH26W-Om5-HWFdSMmmnXwHLSN1yxQhRTgt3/exec";
 const CATALOGO_READY = new Promise((resolve) => {
   const cargarDespuesDelPrimerRender = () => cargarCatalogoRemoto().then(resolve);
   if ("requestIdleCallback" in window) {

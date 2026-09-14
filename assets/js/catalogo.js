@@ -146,6 +146,7 @@
       precio: Number((grupo[0].precio ?? 0)),
       imagen: grupo[0].imagen,
       disponible: grupo.some((item) => item.disponible),
+      esOferta: grupo.variantes.some((item) => item.esOferta),
       categoria: (grupo[0].categorias || [])[0] || "recien_nacido",
       subtitulo: grupo[0].subtitulo,
       variantes: grupo,
@@ -182,9 +183,11 @@
       }).join("");
 
       const hasNewBadge = Boolean(diseno.esNuevo || grupo.variantes.some((item) => item.esNuevo));
-      const badgeMarkup = hasNewBadge
-        ? '<span class="badge nuevo">Nuevo</span>'
-        : `<span class="badge ${grupo.disponible ? "" : "apartado"}">${grupo.disponible ? "Disponible" : "Apartado"}</span>`;
+      const badgeMarkup = [
+        hasNewBadge ? '<span class="badge nuevo">Nuevo</span>' : "",
+        grupo.esOferta ? '<span class="badge promocion">Promoción</span>' : "",
+        !hasNewBadge && !grupo.esOferta ? `<span class="badge ${grupo.disponible ? "" : "apartado"}">${grupo.disponible ? "Disponible" : "Apartado"}</span>` : ""
+      ].join("");
 
       const labelVariantes = grupo.totalVariantes > 1 ? `${grupo.totalVariantes} diseños` : "1 diseño";
       const subtituloGrupo = grupo.variantes.length > 1
@@ -318,9 +321,10 @@
   }
 
   async function obtenerFolio(diseno, nombreCliente, telefonoCliente) {
+    const attribution = ReferralTracking.getAttribution();
     // Sin URL configurada todavía → folio temporal, sin guardar en Sheets
     if (!URL_APPS_SCRIPT) {
-      return generarFolioTemporal();
+      return { folio: generarFolioTemporal(), attribution };
     }
 
     try {
@@ -332,30 +336,39 @@
           diseno: diseno.nombre,
           precio: diseno.precio,
           nombreCliente: nombreCliente,
-          telefonoCliente: telefonoCliente
+          telefonoCliente: telefonoCliente,
+          referralCode: ReferralTracking.getAttribution().code
         })
       });
 
       const resultado = await respuesta.json();
 
       if (resultado.ok && resultado.folio) {
-        return resultado.folio;
+        return {
+          folio: resultado.folio,
+          attribution: {
+            code: resultado.referralCode || "",
+            sellerName: resultado.referralSeller || ""
+          }
+        };
       }
       // Si Sheets respondió pero con error, usamos folio temporal como respaldo
-      return generarFolioTemporal();
+      return { folio: generarFolioTemporal(), attribution };
 
     } catch (error) {
       // Sin internet o el script falló: el cliente igual puede apartar
       console.error("No se pudo conectar con Google Sheets:", error);
-      return generarFolioTemporal();
+      return { folio: generarFolioTemporal(), attribution };
     }
   }
 
   /* ---------------------------------------------------------
      4. ARMAR MENSAJE Y ABRIR WHATSAPP
      --------------------------------------------------------- */
-  function construirEnlaceWhatsapp(folio, nombreCliente, diseno) {
-    const referralLine = ReferralTracking.getWhatsappLine();
+  function construirEnlaceWhatsapp(folio, nombreCliente, diseno, attribution = ReferralTracking.getAttribution()) {
+    const referralLine = attribution.code
+      ? `Referencia: ${attribution.sellerName || attribution.code} (código ${attribution.code})`
+      : "";
     const mensaje =
       `Hola, quiero apartar mi bebé\n\n` +
       `Diseño: ${diseno.nombre}\n` +
@@ -388,12 +401,14 @@
     btnConfirmar.disabled = true;
     btnConfirmar.textContent = "Generando tu folio...";
 
-    const folio = await obtenerFolio(disenoSeleccionado, nombreCliente, telefonoCliente);
+    const reservation = await obtenerFolio(disenoSeleccionado, nombreCliente, telefonoCliente);
+    const folio = reservation.folio;
 
     const enlaceWhatsapp = construirEnlaceWhatsapp(
       folio,
       nombreCliente,
-      disenoSeleccionado
+      disenoSeleccionado,
+      reservation.attribution
     );
 
     // Mostrar vista de éxito con el folio

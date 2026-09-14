@@ -54,10 +54,12 @@ function crearModalReservaDetalle() {
   return modal;
 }
 
-function construirEnlaceWhatsapp(folio, nombreCliente, telefonoCliente, diseno, categoriaLabel) {
+function construirEnlaceWhatsapp(folio, nombreCliente, telefonoCliente, diseno, categoriaLabel, attribution = ReferralTracking.getAttribution()) {
   const nombre = diseno?.nombre || "Bebé Reborn";
   const precio = Number(diseno?.precio ?? 0);
-  const referralLine = ReferralTracking.getWhatsappLine();
+  const referralLine = attribution.code
+    ? `Referencia: ${attribution.sellerName || attribution.code} (código ${attribution.code})`
+    : "";
   const mensaje =
     `Hola, quiero apartar mi bebé 👶\n\n` +
     `Folio: ${folio}\n` +
@@ -109,7 +111,8 @@ function abrirFormularioReserva(diseno, categoriaLabel) {
           diseno: diseno?.nombre || "Bebé Reborn",
           precio: Number(diseno?.precio || 0),
           nombreCliente: formData.get("nombre"),
-          telefonoCliente: formData.get("telefono")
+          telefonoCliente: formData.get("telefono"),
+          referralCode: ReferralTracking.getAttribution().code
         })
       });
       const result = await response.json();
@@ -121,7 +124,8 @@ function abrirFormularioReserva(diseno, categoriaLabel) {
         formData.get("nombre"),
         formData.get("telefono"),
         diseno,
-        categoriaLabel
+        categoriaLabel,
+        { code: result.referralCode, sellerName: result.referralSeller }
       );
       form.hidden = true;
       success.hidden = false;
@@ -398,7 +402,10 @@ function actualizarDetalles(variant) {
   document.getElementById("detail-price").textContent = `$${precio.toLocaleString("es-MX")} MXN`;
 
   const badges = document.getElementById("detail-badges");
-  badges.innerHTML = (variant.categorias || []).map((categoria) => `<span class="detail-badge">${CATEGORY_LABELS[categoria] || categoria}</span>`).join("");
+  badges.innerHTML = [
+    ...(variant.categorias || []).map((categoria) => `<span class="detail-badge">${CATEGORY_LABELS[categoria] || categoria.replace(/_/g, " ")}</span>`),
+    variant.esOferta ? '<span class="detail-badge detail-badge-promotion">Promoción</span>' : ""
+  ].join("");
 
   const incluyeTexto = Array.isArray(variant.incluye) ? variant.incluye.join(", ") : (variant.incluye || "Incluye certificado de autenticidad.");
 

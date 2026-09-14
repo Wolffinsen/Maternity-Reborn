@@ -12,7 +12,7 @@
  *
  * La hoja debe llamarse "Ventas". Si no existe, se usa la primera hoja.
  * Encabezados recomendados:
- * Fecha | Folio | Cliente | Telefono | Diseno | Precio | Estado
+ * Fecha | Folio | Cliente | Telefono | Diseno | Precio | Estado | Es referencia | Codigo referencia | Vendedor referencia
  */
 
 const SALES_SHEET_NAME = "Ventas";
@@ -277,6 +277,11 @@ function createReservation(payload) {
   const sheet = getSalesSheet();
   const headers = ensureHeaders(sheet);
   const folio = createFolio(sheet, headers);
+  const referralCode = String(payload.referralCode || "").trim().toUpperCase();
+  const referralRegistry = readReferralCodes();
+  const referralSeller = referralCode && referralRegistry[referralCode]
+    ? String(referralRegistry[referralCode].name || "").trim()
+    : "";
   const now = new Date();
   const row = headers.map(function (header) {
     switch (normalizeHeader(header)) {
@@ -287,12 +292,20 @@ function createReservation(payload) {
       case "diseno": return diseno;
       case "precio": return precio;
       case "estado": return "activo";
+      case "esreferencia": return referralSeller ? "Sí" : "No";
+      case "codigoreferencia": return referralSeller ? referralCode : "";
+      case "vendedorreferencia": return referralSeller;
       default: return "";
     }
   });
 
   sheet.appendRow(row);
-  return jsonResponse({ ok: true, folio: folio });
+  return jsonResponse({
+    ok: true,
+    folio: folio,
+    referralCode: referralSeller ? referralCode : "",
+    referralSeller: referralSeller
+  });
 }
 
 function readSalesRows() {
@@ -310,7 +323,10 @@ function readSalesRows() {
         diseno: getCell(row, headers, ["diseno", "diseño", "producto"]),
         precio: Number(getCell(row, headers, ["precio", "total"]) || 0),
         estado: normalizeStatus(getCell(row, headers, ["estado", "estatus", "status"])),
-        fecha: formatDate(getCell(row, headers, ["fecha", "timestamp", "fechadeapartado"]))
+        fecha: formatDate(getCell(row, headers, ["fecha", "timestamp", "fechadeapartado"])),
+        isReferral: getCell(row, headers, ["esreferencia"]),
+        referralCode: getCell(row, headers, ["codigoreferencia"]),
+        referralSeller: getCell(row, headers, ["vendedorreferencia"])
       };
     })
     .filter(function (row) {
@@ -378,6 +394,7 @@ function saveCatalog(payload) {
         case "talla": return product.talla || "";
         case "material": return product.material || "";
         case "esnuevo": return product.esNuevo === true;
+        case "esoferta": return product.esOferta === true;
         default: return "";
       }
     });
@@ -421,7 +438,8 @@ function readCatalogRows() {
         disponible: String(getCell(row, headers, ["disponible"])).toLowerCase() !== "false",
         talla: getCell(row, headers, ["talla"]),
         material: getCell(row, headers, ["material"]),
-        esNuevo: String(getCell(row, headers, ["esnuevo"])).toLowerCase() === "true"
+        esNuevo: String(getCell(row, headers, ["esnuevo"])).toLowerCase() === "true",
+        esOferta: String(getCell(row, headers, ["esoferta"])).toLowerCase() === "true"
       };
     });
 }
@@ -437,23 +455,40 @@ function getCatalogSheet() {
 }
 
 function ensureCatalogHeaders(sheet) {
-  const headers = ["ID", "Nombre", "Categoria", "Descripcion", "Precio", "Imagen", "Fotos", "Disponible", "Talla", "Material", "EsNuevo"];
+  const headers = ["ID", "Nombre", "Categoria", "Descripcion", "Precio", "Imagen", "Fotos", "Disponible", "Talla", "Material", "EsNuevo", "EsOferta"];
   if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     return headers;
   }
 
-  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (!existingHeaders.some(function (header) { return normalizeHeader(header) === "esoferta"; })) {
+    sheet.getRange(1, existingHeaders.length + 1).setValue("EsOferta");
+    return existingHeaders.concat(["EsOferta"]);
+  }
+  return existingHeaders;
 }
 
 function ensureHeaders(sheet) {
   if (sheet.getLastRow() === 0) {
-    const headers = ["Fecha", "Folio", "Cliente", "Telefono", "Diseno", "Precio", "Estado"];
+    const headers = ["Fecha", "Folio", "Cliente", "Telefono", "Diseno", "Precio", "Estado", "Es referencia", "Codigo referencia", "Vendedor referencia"];
     sheet.appendRow(headers);
     return headers;
   }
 
-  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const requiredHeaders = ["Es referencia", "Codigo referencia", "Vendedor referencia"];
+  const normalizedHeaders = headers.map(normalizeHeader);
+  const missingHeaders = requiredHeaders.filter(function (header) {
+    return normalizedHeaders.indexOf(normalizeHeader(header)) < 0;
+  });
+
+  if (missingHeaders.length) {
+    sheet.getRange(1, headers.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+    return headers.concat(missingHeaders);
+  }
+
+  return headers;
 }
 
 function createFolio(sheet, headers) {

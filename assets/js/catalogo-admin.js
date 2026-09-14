@@ -24,6 +24,31 @@
     silicona_premium: "Silicona premium"
   };
 
+  function crearClaveCategoria(label) {
+    return String(label || "")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "_")
+      .replace(/^_+|_+$/g, "");
+  }
+
+  function obtenerCategorias() {
+    return [...new Set(CATALOGO.flatMap((product) => product.categorias || []))].filter(Boolean);
+  }
+
+  function actualizarOpcionesCategoria(selectedCategory = "") {
+    const select = overlay.querySelector("#catalogo-admin-category");
+    if (!select) return;
+    const categories = obtenerCategorias();
+    select.innerHTML = categories.map((category) => `<option value="${category}">${CATEGORIA_LABELS[category] || category.replace(/_/g, " ")}</option>`).join("");
+    if (selectedCategory && !categories.includes(selectedCategory)) {
+      select.insertAdjacentHTML("beforeend", `<option value="${selectedCategory}">${selectedCategory.replace(/_/g, " ")}</option>`);
+    }
+    select.value = selectedCategory || categories[0] || "recien_nacido";
+  }
+
   // Aviso de tamaño en localStorage (ahora solo guardamos URLs de texto,
   // así que este límite ya casi nunca se debería alcanzar).
   const AVISO_TAMANO_BYTES = 3.5 * 1024 * 1024;
@@ -60,7 +85,7 @@
         <label class="field-label" for="catalogo-admin-description">Descripción</label>
         <textarea class="field-input" id="catalogo-admin-description" rows="3" required></textarea>
         <div class="catalogo-admin-fields">
-          <div><label class="field-label" for="catalogo-admin-category">Categoría</label><select class="field-input" id="catalogo-admin-category"><option value="prematuro">Prematuro</option><option value="recien_nacido">Recién nacido</option><option value="3_meses">3 meses</option><option value="silicona">Silicona</option><option value="silicona_premium">Silicona premium</option></select></div>
+          <div><label class="field-label" for="catalogo-admin-category">Categoría</label><div class="catalogo-admin-category-control"><select class="field-input" id="catalogo-admin-category"></select><button type="button" class="btn-secondary" id="catalogo-admin-new-category">+ Nueva categoría</button></div></div>
           <div><label class="field-label" for="catalogo-admin-price">Precio MXN</label><input class="field-input" id="catalogo-admin-price" type="number" min="0" step="1" required></div>
           <div><label class="field-label" for="catalogo-admin-size">Talla</label><input class="field-input" id="catalogo-admin-size" required></div>
           <div><label class="field-label" for="catalogo-admin-material">Material</label><input class="field-input" id="catalogo-admin-material" required></div>
@@ -71,6 +96,7 @@
         <p class="catalogo-admin-hint" id="catalogo-admin-upload-hint">Arrastra para ordenar. La primera imagen será la portada. Sólo JPEG, JPG o PNG de máximo 5 MB.</p>
         <label class="catalogo-admin-check"><input id="catalogo-admin-available" type="checkbox"> Disponible</label>
         <label class="catalogo-admin-check"><input id="catalogo-admin-new" type="checkbox"> Marcar como nuevo</label>
+        <label class="catalogo-admin-check"><input id="catalogo-admin-promotion" type="checkbox"> Mostrar banner de promoción</label>
         <div class="catalogo-admin-actions"><button type="submit" class="btn-primary">Guardar cambios</button><button type="button" class="btn-secondary" id="catalogo-admin-cancel">Cancelar</button></div>
         <p class="admin-error" id="catalogo-admin-message" role="status" hidden></p>
       </form>
@@ -217,7 +243,7 @@
     overlay.querySelector("#catalogo-admin-id").value = product ? product.id : "";
     overlay.querySelector("#catalogo-admin-name").value = product?.nombre || "";
     overlay.querySelector("#catalogo-admin-description").value = product?.descripcion || "";
-    overlay.querySelector("#catalogo-admin-category").value = product?.categorias?.[0] || "recien_nacido";
+    actualizarOpcionesCategoria(product?.categorias?.[0] || "recien_nacido");
     overlay.querySelector("#catalogo-admin-price").value = product?.precio || "";
     overlay.querySelector("#catalogo-admin-size").value = product?.talla || "Talla estándar";
     overlay.querySelector("#catalogo-admin-material").value = product?.material || "Vinilo reborn";
@@ -226,6 +252,7 @@
     renderImageGallery();
     overlay.querySelector("#catalogo-admin-available").checked = product ? product.disponible !== false : true;
     overlay.querySelector("#catalogo-admin-new").checked = Boolean(product?.esNuevo);
+    overlay.querySelector("#catalogo-admin-promotion").checked = Boolean(product?.esOferta);
     overlay.querySelector("#catalogo-admin-message").hidden = true;
     overlay.querySelector("#catalogo-admin-name").focus();
   }
@@ -247,6 +274,7 @@
           <div class="catalogo-admin-card-image">
             <img src="${product.imagen || ""}" alt="" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0'">
             ${product.esNuevo ? '<span class="catalogo-admin-tag is-new">Nuevo</span>' : ""}
+            ${product.esOferta ? '<span class="catalogo-admin-tag is-promotion">Promoción</span>' : ""}
             <span class="catalogo-admin-tag ${disponible ? "is-available" : "is-unavailable"}">${disponible ? "Disponible" : "Apartado"}</span>
           </div>
           <div class="catalogo-admin-card-body">
@@ -367,6 +395,12 @@
 
   editor.querySelector("#catalogo-admin-add").addEventListener("click", () => openEditor(null));
   editor.querySelector("#catalogo-admin-manage").addEventListener("click", showProductGrid);
+  overlay.querySelector("#catalogo-admin-new-category").addEventListener("click", () => {
+    const label = window.prompt("Nombre de la nueva categoría:");
+    const key = crearClaveCategoria(label);
+    if (!key) return;
+    actualizarOpcionesCategoria(key);
+  });
   migrationInput.addEventListener("change", () => {
     migrarImagenesExistentes(migrationInput.files);
     migrationInput.value = "";
@@ -436,7 +470,8 @@
         disponible: overlay.querySelector("#catalogo-admin-available").checked,
         talla: overlay.querySelector("#catalogo-admin-size").value.trim(),
         material: overlay.querySelector("#catalogo-admin-material").value.trim(),
-        esNuevo: overlay.querySelector("#catalogo-admin-new").checked
+        esNuevo: overlay.querySelector("#catalogo-admin-new").checked,
+        esOferta: overlay.querySelector("#catalogo-admin-promotion").checked
       };
       const normalized = crearDiseno(product);
       if (editingProduct) {
