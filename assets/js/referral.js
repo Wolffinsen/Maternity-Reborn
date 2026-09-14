@@ -53,10 +53,8 @@
     const code = normalizarCodigo(value);
     if (!REFERRAL_CODE_PATTERN.test(code)) return false;
 
-    // Mientras no exista un registro, la validación de formato mantiene activa la base.
-    // Cuando se agregan códigos, solo se aceptan vendedores registrados.
-      const registeredCodes = Object.keys(obtenerRegistroCompleto());
-    return registeredCodes.length === 0 || registeredCodes.includes(code);
+    const registeredCodes = Object.keys(obtenerRegistroCompleto());
+    return registeredCodes.includes(code);
   }
 
   function leerGuardado() {
@@ -78,17 +76,26 @@
     }
   }
 
+  function limpiarCodigo() {
+    try {
+      window.localStorage.removeItem(REFERRAL_STORAGE_KEY);
+    } catch (error) {
+      // Algunos navegadores bloquean el almacenamiento; la página actual sigue funcionando.
+    }
+  }
+
   function obtenerCodigo() {
     const guardado = leerGuardado();
     return guardado && codigoValido(guardado.code) ? normalizarCodigo(guardado.code) : "";
   }
 
   function capturarDesdeUrl() {
-    const code = normalizarCodigo(new URLSearchParams(window.location.search).get(REFERRAL_QUERY_PARAM));
-    if (codigoValido(code)) {
-      // First-touch attribution is the default. Change this rule here if later
-      // campaigns should replace an existing referral.
-      if (!obtenerCodigo()) guardarCodigo(code);
+    const parametros = new URLSearchParams(window.location.search);
+    const tieneReferencia = parametros.has(REFERRAL_QUERY_PARAM);
+    const code = normalizarCodigo(parametros.get(REFERRAL_QUERY_PARAM));
+    if (tieneReferencia) {
+      if (codigoValido(code)) guardarCodigo(code);
+      else limpiarCodigo();
       return;
     }
 
@@ -96,14 +103,15 @@
       .split("/")
       .filter(Boolean)
       .pop();
-    if (!pathSlug || pathSlug === "index.html" || pathSlug === "admin.html") return;
+    if (!pathSlug || pathSlug === "index.html" || pathSlug === "admin.html") {
+      if (!pathSlug || pathSlug === "index.html") limpiarCodigo();
+      return;
+    }
 
     const seller = Object.entries(obtenerRegistroCompleto())
       .find(([, data]) => crearSlug(data.name) === crearSlug(pathSlug));
-    if (!seller || obtenerCodigo()) return;
+    if (!seller) return;
 
-    // First-touch attribution is the default. Change this rule here if later
-    // campaigns should replace an existing referral.
     guardarCodigo(seller[0]);
   }
 
@@ -155,9 +163,10 @@
 
   function eliminarVendedor(code) {
     const normalizedCode = normalizarCodigo(code);
-    const registry = leerRegistro();
+    const registry = obtenerRegistroCompleto();
     if (!registry[normalizedCode]) return { ok: false, error: "El vendedor no existe." };
     delete registry[normalizedCode];
+    delete remoteRegistry[normalizedCode];
     try {
       window.localStorage.setItem(SELLER_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
       return { ok: true };

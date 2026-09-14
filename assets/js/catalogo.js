@@ -146,7 +146,7 @@
       precio: Number((grupo[0].precio ?? 0)),
       imagen: grupo[0].imagen,
       disponible: grupo.some((item) => item.disponible),
-      esOferta: grupo.variantes.some((item) => item.esOferta),
+      esOferta: grupo.some((item) => item.esOferta),
       categoria: (grupo[0].categorias || [])[0] || "recien_nacido",
       subtitulo: grupo[0].subtitulo,
       variantes: grupo,
