@@ -1,14 +1,11 @@
 /* =========================================================
    CATALOGO.JS
-   Renderiza el catálogo, controla el modal de apartado,
-   genera el folio y arma el mensaje de WhatsApp.
+   Renderiza el catálogo dividido automáticamente por
+   categorías. Cada categoría es una fila con scroll horizontal
+   (deslizas con el dedo en móvil, o usas las flechas en escritorio).
 
-   NOTA IMPORTANTE:
-   El folio que se genera aquí es temporal (fecha + número
-   aleatorio). Cuando conectemos Google Sheets (Fase 2 del
-   proyecto), el folio consecutivo real vendrá de ahí y solo
-   hay que reemplazar la función generarFolio() por la llamada
-   al Apps Script.
+   Las categorías salen solas de CATALOGO: si en el panel de
+   administrador creas una categoría nueva, aparece como fila nueva.
    ========================================================= */
 
 (function () {
@@ -22,27 +19,45 @@
     silicona_premium: "Silicona premium"
   };
 
-  function activarScrollSuave() {
-    // El desplazamiento nativo usa scroll-behavior y evita medir el layout en cada frame.
-  }
+  // Orden en que aparecen las filas (por talla). Las categorías nuevas van al final.
+  const CATEGORY_ORDER = Object.keys(ES_LABELS);
 
   const grid = document.getElementById("catalogo-grid");
   const searchInput = document.getElementById("catalogo-search");
   const categoryFilters = document.getElementById("category-filters");
   const emptyState = document.getElementById("catalogo-empty");
-  const modalOverlay = document.getElementById("modal-overlay");
-  const modalClose = document.getElementById("modal-close");
-  const modalFormView = document.getElementById("modal-form-view");
-  const modalSuccessView = document.getElementById("modal-success-view");
-  const modalTitle = document.getElementById("modal-title");
-  const modalPrice = document.getElementById("modal-price");
-  const formApartado = document.getElementById("form-apartado");
-  const inputNombre = document.getElementById("input-nombre");
-  const inputTelefono = document.getElementById("input-telefono");
-  const folioDisplay = document.getElementById("folio-display");
-  const btnAbrirWhatsapp = document.getElementById("btn-abrir-whatsapp");
-  const btnCerrarExito = document.getElementById("btn-cerrar-exito");
 
+  let categoriaActiva = "todas";
+
+  /* ---------------------------------------------------------
+     Utilidades
+     --------------------------------------------------------- */
+  function esc(value) {
+    return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[char]));
+  }
+
+  function labelCategoria(key) {
+    if (ES_LABELS[key]) return ES_LABELS[key];
+    const texto = String(key || "").replace(/_/g, " ").trim();
+    return texto.charAt(0).toUpperCase() + texto.slice(1);
+  }
+
+  function ordenCategoria(key) {
+    const index = CATEGORY_ORDER.indexOf(key);
+    return index === -1 ? CATEGORY_ORDER.length : index;
+  }
+
+  function getCategoriasDisponibles() {
+    const categorias = new Set();
+    CATALOGO.forEach((diseno) => (diseno.categorias || []).forEach((c) => categorias.add(c)));
+    return [...categorias].sort((a, b) => ordenCategoria(a) - ordenCategoria(b) || a.localeCompare(b));
+  }
+
+  /* ---------------------------------------------------------
+     Aviso de anticipo
+     --------------------------------------------------------- */
   function mostrarToastAnticipo() {
     if (document.getElementById("anticipo-toast")) return;
 
@@ -54,68 +69,39 @@
     toast.innerHTML = `
       <div class="anticipo-toast__content">
         <strong>Anticipo</strong>
-        <p>Puedes apartar tu bebé con un anticipo de $200 MXN</p>
-        <a href="#catalogo">Ver catálogo</a>
+        <p>Puedes apartar tu bebé con un anticipo de $${COSTO_APARTADO} MXN</p>
       </div>
       <button type="button" class="anticipo-toast__close" aria-label="Cerrar aviso">Entendido</button>
     `;
-
     document.body.appendChild(toast);
 
-    const cerrarToast = toast.querySelector(".anticipo-toast__close");
-    cerrarToast.addEventListener("click", () => {
-      toast.classList.remove("is-visible");
-    });
+    const cerrar = () => toast.classList.remove("is-visible");
+    toast.querySelector(".anticipo-toast__close").addEventListener("click", cerrar);
 
     requestAnimationFrame(() => toast.classList.add("is-visible"));
+    window.setTimeout(cerrar, 9000); // se va solo para no estorbar en móvil
   }
 
-  let disenoSeleccionado = null;
-  let categoriaActiva = "todas";
-
-  function normalizarCategoria(categoria) {
-    return categoria
-      .trim()
-      .toLowerCase()
-      .replace(/\s+/g, "_")
-      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-  }
-
-  function getCategoriasDisponibles() {
-    const categorias = new Set();
-    CATALOGO.forEach((diseno) => {
-      (diseno.categorias || []).forEach((categoria) => categorias.add(normalizarCategoria(ES_LABELS[categoria] || categoria)));
-    });
-    return [...categorias].sort();
-  }
-
+  /* ---------------------------------------------------------
+     Filtros
+     --------------------------------------------------------- */
   function renderCategoryFilters() {
     if (!categoryFilters) return;
 
     const categorias = ["todas", ...getCategoriasDisponibles()];
     categoryFilters.innerHTML = categorias.map((categoria) => {
-      const label = categoria === "todas" ? "Todas" : (ES_LABELS[categoria] || categoria.replace(/_/g, " "));
-      const activeClass = categoria === categoriaActiva ? "is-active" : "";
-      return `<button type="button" class="filter-chip ${activeClass}" data-category="${categoria}">${label}</button>`;
+      const label = categoria === "todas" ? "Todas" : labelCategoria(categoria);
+      const active = categoria === categoriaActiva;
+      return `<button type="button" class="filter-chip${active ? " is-active" : ""}" data-category="${esc(categoria)}" aria-pressed="${active}">${esc(label)}</button>`;
     }).join("");
-
-    categoryFilters.querySelectorAll(".filter-chip").forEach((button) => {
-      button.addEventListener("click", () => {
-        categoriaActiva = button.dataset.category;
-        renderCatalogo();
-      });
-    });
   }
 
   function filtrarCatalogo() {
     const valorBusqueda = (searchInput ? searchInput.value : "").trim().toLowerCase();
 
     return CATALOGO.filter((diseno) => {
-      const categorias = (diseno.categorias || []).map((categoria) => normalizarCategoria(ES_LABELS[categoria] || categoria));
-      const coincideCategoria = categoriaActiva === "todas" || categorias.includes(categoriaActiva);
-
-      if (!coincideCategoria) return false;
-
+      const categorias = diseno.categorias || [];
+      if (categoriaActiva !== "todas" && !categorias.includes(categoriaActiva)) return false;
       if (!valorBusqueda) return true;
 
       const textoBusqueda = [
@@ -123,7 +109,7 @@
         diseno.subtitulo,
         diseno.material,
         diseno.descripcion,
-        ...(diseno.categorias || []).map((categoria) => ES_LABELS[categoria] || categoria)
+        ...categorias.map(labelCategoria)
       ].join(" ").toLowerCase();
 
       return textoBusqueda.includes(valorBusqueda);
@@ -135,302 +121,202 @@
 
     productos.forEach((diseno) => {
       const key = `${diseno.nombre}-${diseno.categorias?.[0] || "general"}`;
-      if (!grupos.has(key)) {
-        grupos.set(key, []);
-      }
+      if (!grupos.has(key)) grupos.set(key, []);
       grupos.get(key).push(diseno);
     });
 
     return [...grupos.values()].map((grupo) => ({
       nombre: grupo[0].nombre,
-      precio: Number((grupo[0].precio ?? 0)),
-      imagen: grupo[0].imagen,
+      precio: Number(grupo[0].precio ?? 0),
       disponible: grupo.some((item) => item.disponible),
       esOferta: grupo.some((item) => item.esOferta),
+      esNuevo: grupo.some((item) => item.esNuevo),
       categoria: (grupo[0].categorias || [])[0] || "recien_nacido",
-      subtitulo: grupo[0].subtitulo,
+      talla: grupo[0].talla,
       variantes: grupo,
-      totalVariantes: grupo.length,
       slug: grupo[0].slug
     }));
+  }
+
+  /* ---------------------------------------------------------
+     Render
+     --------------------------------------------------------- */
+  function renderTarjeta(grupo) {
+    const diseno = grupo.variantes[0];
+    const paletteClass = ["palette-rose", "palette-green", "palette-cream", "palette-gold"][((Number(diseno.id) || 1) - 1) % 4];
+
+    const badges = [
+      grupo.esNuevo ? '<span class="badge nuevo">Nuevo</span>' : "",
+      grupo.esOferta ? '<span class="badge promocion">Promoción</span>' : "",
+      !grupo.esNuevo && !grupo.esOferta
+        ? `<span class="badge${grupo.disponible ? "" : " apartado"}">${grupo.disponible ? "Disponible" : "Apartado"}</span>`
+        : ""
+    ].join("");
+
+    const subtitulo = grupo.variantes.length > 1
+      ? `${grupo.variantes.length} diseños disponibles`
+      : "Pieza única hecha a mano";
+
+    const href = `detalle.html?modelo=${encodeURIComponent(grupo.slug)}`;
+
+    return `
+      <article class="tarjeta">
+        <a class="tarjeta-imagen-wrap ${paletteClass}" href="${href}" aria-label="Ver a ${esc(diseno.nombre)}">
+          <img src="${esc(diseno.imagen)}" alt="Bebé reborn ${esc(diseno.nombre)}" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
+          <div class="tarjeta-badges">${badges}</div>
+        </a>
+        <div class="tarjeta-info">
+          <h4 class="tarjeta-nombre">${esc(diseno.nombre)}</h4>
+          <p class="tarjeta-sub">${subtitulo}</p>
+          <p class="tarjeta-precio">$${grupo.precio.toLocaleString("es-MX")} MXN</p>
+          <a class="btn-detalle" href="${href}">Quiero apartarlo</a>
+        </div>
+      </article>
+    `;
+  }
+
+  function renderFila(categoria, grupos, expandida) {
+    const label = labelCategoria(categoria);
+    const total = grupos.length;
+    const talla = grupos[0]?.talla;
+    const meta = `${total} ${total === 1 ? "diseño" : "diseños"}${talla ? ` · ${esc(talla)}` : ""}`;
+
+    return `
+      <section class="cat-row${expandida ? " is-expanded" : ""}" data-category="${esc(categoria)}" aria-labelledby="cat-${esc(categoria)}">
+        <header class="cat-row-head">
+          <div>
+            <h3 class="cat-row-title" id="cat-${esc(categoria)}">${esc(label)}</h3>
+            <p class="cat-row-meta">${meta}</p>
+          </div>
+          <div class="cat-row-tools">
+            <span class="cat-hint" aria-hidden="true">desliza</span>
+          </div>
+        </header>
+        <div class="cat-row-viewport">
+          <button type="button" class="cat-arrow cat-arrow-prev" data-dir="-1" aria-label="Ver diseños anteriores de ${esc(label)}">&#8249;</button>
+          <div class="cat-track" tabindex="0" role="list" aria-label="Diseños de ${esc(label)}">
+            ${grupos.map(renderTarjeta).join("")}
+          </div>
+          <button type="button" class="cat-arrow cat-arrow-next" data-dir="1" aria-label="Ver más diseños de ${esc(label)}">&#8250;</button>
+        </div>
+      </section>
+    `;
+  }
+
+  function actualizarEstadoFila(row) {
+    const track = row.querySelector(".cat-track");
+    if (!track) return;
+
+    const max = track.scrollWidth - track.clientWidth;
+    const scrollable = !row.classList.contains("is-expanded") && max > 4;
+
+    row.classList.toggle("is-scrollable", scrollable);
+    row.classList.toggle("at-start", track.scrollLeft <= 4);
+    row.classList.toggle("at-end", track.scrollLeft >= max - 4);
+
+    const [prev, next] = row.querySelectorAll(".cat-arrow");
+    if (prev) prev.disabled = track.scrollLeft <= 4;
+    if (next) next.disabled = track.scrollLeft >= max - 4;
+  }
+
+  function actualizarTodasLasFilas() {
+    if (!grid) return;
+    grid.querySelectorAll(".cat-row").forEach(actualizarEstadoFila);
   }
 
   function renderCatalogo() {
     if (!grid) return;
 
-    renderCategoryFilters();
-    const productos = filtrarCatalogo();
-    const grupos = agruparPorPersonaje(productos);
-    grid.innerHTML = "";
+    // Si la categoría activa ya no existe (por ejemplo, se eliminó), volvemos a "todas".
+    if (categoriaActiva !== "todas" && !getCategoriasDisponibles().includes(categoriaActiva)) {
+      categoriaActiva = "todas";
+    }
 
-    if (grupos.length === 0) {
+    renderCategoryFilters();
+
+    const grupos = agruparPorPersonaje(filtrarCatalogo());
+    const porCategoria = new Map();
+    grupos.forEach((grupo) => {
+      if (!porCategoria.has(grupo.categoria)) porCategoria.set(grupo.categoria, []);
+      porCategoria.get(grupo.categoria).push(grupo);
+    });
+
+    if (!grupos.length) {
+      grid.innerHTML = "";
       emptyState.hidden = false;
       return;
     }
-
     emptyState.hidden = true;
 
-    grupos.forEach((grupo) => {
-      const diseno = grupo.variantes[0];
-      const tarjeta = document.createElement("div");
-      tarjeta.className = "tarjeta";
+    const expandida = categoriaActiva !== "todas";
+    const categorias = [...porCategoria.keys()].sort((a, b) => ordenCategoria(a) - ordenCategoria(b) || a.localeCompare(b));
+    grid.innerHTML = categorias.map((categoria) => renderFila(categoria, porCategoria.get(categoria), expandida)).join("");
 
-      const precioNumero = Number(grupo.precio ?? 0);
-      const paletteClass = ["palette-rose", "palette-green", "palette-cream", "palette-gold"][((Number(diseno.id) - 1) % 4)];
-      const categoriasHtml = (diseno.categorias || []).map((categoria) => {
-        const label = ES_LABELS[categoria] || categoria.replace(/_/g, " ");
-        return `<span class="product-badge">${label}</span>`;
-      }).join("");
-
-      const hasNewBadge = Boolean(diseno.esNuevo || grupo.variantes.some((item) => item.esNuevo));
-      const badgeMarkup = [
-        hasNewBadge ? '<span class="badge nuevo">Nuevo</span>' : "",
-        grupo.esOferta ? '<span class="badge promocion">Promoción</span>' : "",
-        !hasNewBadge && !grupo.esOferta ? `<span class="badge ${grupo.disponible ? "" : "apartado"}">${grupo.disponible ? "Disponible" : "Apartado"}</span>` : ""
-      ].join("");
-
-      const labelVariantes = grupo.totalVariantes > 1 ? `${grupo.totalVariantes} diseños` : "1 diseño";
-      const subtituloGrupo = grupo.variantes.length > 1
-        ? `${labelVariantes} · ${ES_LABELS[grupo.categoria] || grupo.categoria.replace(/_/g, " ")}`
-        : (diseno.subtitulo || "Pieza única hecha a mano");
-
-      tarjeta.innerHTML = `
-        <div class="tarjeta-imagen-wrap ${paletteClass}">
-          ${badgeMarkup}
-          <div class="tarjeta-badges">${categoriasHtml}</div>
-          <img src="${diseno.imagen}" alt="Diseño ${diseno.nombre}" width="1200" height="1600" loading="lazy" decoding="async" data-lightbox="true" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
-        </div>
-        <div class="tarjeta-info">
-          <h3 class="tarjeta-nombre">${diseno.nombre}</h3>
-          <p class="tarjeta-sub">${subtituloGrupo}</p>
-          <p class="tarjeta-precio">$${precioNumero.toLocaleString("es-MX")} MXN</p>
-          <a class="btn-detalle" href="detalle.html?modelo=${encodeURIComponent(grupo.slug)}">QUIERO APARTARLO</a>
-        </div>
-      `;
-
-      grid.appendChild(tarjeta);
+    grid.querySelectorAll(".cat-row").forEach((row) => {
+      const track = row.querySelector(".cat-track");
+      let ticking = false;
+      track.addEventListener("scroll", () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          actualizarEstadoFila(row);
+          ticking = false;
+        });
+      }, { passive: true });
     });
 
-    bindCatalogoLightbox();
+    requestAnimationFrame(actualizarTodasLasFilas);
   }
 
-  function bindCatalogoLightbox() {
-    document.querySelectorAll('[data-lightbox="true"]').forEach((image) => {
-      image.onclick = () => {
-        const lightbox = document.getElementById("image-lightbox") || document.createElement("div");
-        if (!document.getElementById("image-lightbox")) {
-          lightbox.id = "image-lightbox";
-          lightbox.className = "image-lightbox";
-          lightbox.innerHTML = `
-            <div class="image-lightbox__panel">
-              <button type="button" class="image-lightbox__close" aria-label="Cerrar vista ampliada">×</button>
-              <img class="image-lightbox__image" src="" alt="Vista ampliada" width="1200" height="1600" decoding="async" />
-            </div>
-          `;
-          document.body.appendChild(lightbox);
-
-          const closeBtn = lightbox.querySelector(".image-lightbox__close");
-          const img = lightbox.querySelector(".image-lightbox__image");
-
-          closeBtn.addEventListener("click", () => {
-            lightbox.classList.remove("is-open");
-            img.src = "";
-          });
-
-          lightbox.addEventListener("click", (event) => {
-            if (event.target === lightbox) {
-              lightbox.classList.remove("is-open");
-              img.src = "";
-            }
-          });
-
-          document.addEventListener("keydown", (event) => {
-            if (event.key === "Escape") {
-              lightbox.classList.remove("is-open");
-              img.src = "";
-            }
-          });
-        }
-
-        const img = lightbox.querySelector(".image-lightbox__image");
-        img.src = image.src;
-        img.alt = image.alt;
-        lightbox.classList.add("is-open");
-      };
+  /* ---------------------------------------------------------
+     Eventos (delegados: sobreviven a cada re-render)
+     --------------------------------------------------------- */
+  if (grid) {
+    grid.addEventListener("click", (event) => {
+      const arrow = event.target.closest(".cat-arrow");
+      if (!arrow) return;
+      const row = arrow.closest(".cat-row");
+      const track = row.querySelector(".cat-track");
+      const direction = Number(arrow.dataset.dir);
+      row.classList.remove("is-moving-prev", "is-moving-next");
+      void row.offsetWidth;
+      row.classList.add(direction < 0 ? "is-moving-prev" : "is-moving-next");
+      window.setTimeout(() => row.classList.remove("is-moving-prev", "is-moving-next"), 360);
+      track.scrollBy({ left: direction * track.clientWidth * 0.85, behavior: "smooth" });
     });
   }
 
-  if (searchInput) {
-    searchInput.addEventListener("input", renderCatalogo);
+  if (categoryFilters) {
+    categoryFilters.addEventListener("click", (event) => {
+      const chip = event.target.closest(".filter-chip");
+      if (!chip) return;
+      categoriaActiva = chip.dataset.category;
+      renderCatalogo();
+    });
   }
+
+  if (searchInput) searchInput.addEventListener("input", renderCatalogo);
+
+  let resizeQueued = false;
+  window.addEventListener("resize", () => {
+    if (resizeQueued) return;
+    resizeQueued = true;
+    requestAnimationFrame(() => {
+      actualizarTodasLasFilas();
+      resizeQueued = false;
+    });
+  });
 
   window.addEventListener("catalogo:render", renderCatalogo);
   window.renderCatalogo = renderCatalogo;
 
   /* ---------------------------------------------------------
-     2. MODAL: abrir / cerrar
-     --------------------------------------------------------- */
-  function abrirModal(id) {
-    disenoSeleccionado = CATALOGO.find((d) => d.id === id);
-    if (!disenoSeleccionado) return;
-
-    modalTitle.textContent = disenoSeleccionado.nombre;
-    modalPrice.textContent = `$${Number(disenoSeleccionado.precio ?? 0).toLocaleString("es-MX")} MXN`;
-
-    modalFormView.hidden = false;
-    modalSuccessView.hidden = true;
-    formApartado.reset();
-
-    modalOverlay.hidden = false;
-    document.body.style.overflow = "hidden";
-  }
-
-  function cerrarModal() {
-    modalOverlay.hidden = true;
-    document.body.style.overflow = "";
-    disenoSeleccionado = null;
-  }
-
-  modalClose.addEventListener("click", cerrarModal);
-  btnCerrarExito.addEventListener("click", cerrarModal);
-
-  modalOverlay.addEventListener("click", (e) => {
-    if (e.target === modalOverlay) cerrarModal();
-  });
-
-  document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && !modalOverlay.hidden) cerrarModal();
-  });
-
-  /* ---------------------------------------------------------
-     3. FOLIO
-     -----------------------------------------------------------
-     Si URL_APPS_SCRIPT está configurada, el folio consecutivo
-     real viene de Google Sheets. Si no, o si falla la conexión,
-     se genera un folio temporal local (fecha + aleatorio) para
-     que el cliente nunca se quede sin poder apartar.
-     --------------------------------------------------------- */
-  function generarFolioTemporal() {
-    const ahora = new Date();
-    const yyyy = ahora.getFullYear();
-    const mm = String(ahora.getMonth() + 1).padStart(2, "0");
-    const dd = String(ahora.getDate()).padStart(2, "0");
-    const aleatorio = Math.floor(1000 + Math.random() * 9000); // 4 dígitos
-
-    return `AP-${yyyy}${mm}${dd}-${aleatorio}`;
-  }
-
-  async function obtenerFolio(diseno, nombreCliente, telefonoCliente) {
-    const attribution = ReferralTracking.getAttribution();
-    // Sin URL configurada todavía → folio temporal, sin guardar en Sheets
-    if (!URL_APPS_SCRIPT) {
-      return { folio: generarFolioTemporal(), attribution };
-    }
-
-    try {
-      const respuesta = await fetch(URL_APPS_SCRIPT, {
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({
-          action: "createReservation",
-          diseno: diseno.nombre,
-          precio: diseno.precio,
-          nombreCliente: nombreCliente,
-          telefonoCliente: telefonoCliente,
-          referralCode: ReferralTracking.getAttribution().code
-        })
-      });
-
-      const resultado = await respuesta.json();
-
-      if (resultado.ok && resultado.folio) {
-        return {
-          folio: resultado.folio,
-          attribution: {
-            code: resultado.referralCode || "",
-            sellerName: resultado.referralSeller || ""
-          }
-        };
-      }
-      // Si Sheets respondió pero con error, usamos folio temporal como respaldo
-      return { folio: generarFolioTemporal(), attribution };
-
-    } catch (error) {
-      // Sin internet o el script falló: el cliente igual puede apartar
-      console.error("No se pudo conectar con Google Sheets:", error);
-      return { folio: generarFolioTemporal(), attribution };
-    }
-  }
-
-  /* ---------------------------------------------------------
-     4. ARMAR MENSAJE Y ABRIR WHATSAPP
-     --------------------------------------------------------- */
-  function construirEnlaceWhatsapp(folio, nombreCliente, diseno, attribution = ReferralTracking.getAttribution()) {
-    const referralLine = attribution.code
-      ? `Referencia: ${attribution.sellerName || attribution.code} (código ${attribution.code})`
-      : "";
-    const mensaje =
-      `Hola, quiero apartar mi bebé\n\n` +
-      `Diseño: ${diseno.nombre}\n` +
-      `Folio: ${folio}\n` +
-      `Precio del diseño: $${diseno.precio} MXN\n` +
-      `Anticipo de apartado: $${COSTO_APARTADO} MXN\n` +
-      `Nombre: ${nombreCliente}` +
-      (referralLine ? `\n${referralLine}` : "");
-
-    const mensajeCodificado = encodeURIComponent(mensaje);
-    return `https://wa.me/${NUMERO_WHATSAPP}?text=${mensajeCodificado}`;
-  }
-
-  /* ---------------------------------------------------------
-     5. ENVÍO DEL FORMULARIO
-     --------------------------------------------------------- */
-  const btnConfirmar = document.getElementById("btn-confirmar");
-
-  formApartado.addEventListener("submit", async (e) => {
-    e.preventDefault();
-
-    if (!disenoSeleccionado) return;
-
-    const nombreCliente = inputNombre.value.trim();
-    const telefonoCliente = inputTelefono.value.trim();
-
-    if (!nombreCliente || !telefonoCliente) return;
-
-    // Estado de carga mientras se genera/guarda el folio
-    btnConfirmar.disabled = true;
-    btnConfirmar.textContent = "Generando tu folio...";
-
-    const reservation = await obtenerFolio(disenoSeleccionado, nombreCliente, telefonoCliente);
-    const folio = reservation.folio;
-
-    const enlaceWhatsapp = construirEnlaceWhatsapp(
-      folio,
-      nombreCliente,
-      disenoSeleccionado,
-      reservation.attribution
-    );
-
-    // Mostrar vista de éxito con el folio
-    folioDisplay.textContent = folio;
-    btnAbrirWhatsapp.href = enlaceWhatsapp;
-
-    modalFormView.hidden = true;
-    modalSuccessView.hidden = false;
-
-    btnConfirmar.disabled = false;
-    btnConfirmar.textContent = "Continuar a WhatsApp";
-
-    // Abrir WhatsApp automáticamente en una pestaña nueva
-    window.open(enlaceWhatsapp, "_blank");
-  });
-
-  /* ---------------------------------------------------------
      INICIAR
      --------------------------------------------------------- */
-  document.getElementById("anio-actual").textContent = new Date().getFullYear();
+  const anio = document.getElementById("anio-actual");
+  if (anio) anio.textContent = new Date().getFullYear();
+
   mostrarToastAnticipo();
-  activarScrollSuave();
   renderCatalogo();
   CATALOGO_READY.then(() => renderCatalogo());
 })();
