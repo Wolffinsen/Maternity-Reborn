@@ -9,12 +9,12 @@
   const enlace = document.createElement("a");
   enlace.id = "whatsapp-widget";
   enlace.className = "whatsapp-widget";
-  enlace.href = `https://wa.me/${numero}?text=${encodeURIComponent("Hola, me gustaría recibir información sobre los bebés reborn disponibles.")}`;
+  enlace.href = `https://wa.me/${numero}?text=${encodeURIComponent("Hola, quiero apartar un bebé reborn para diciembre.")}`;
   enlace.target = "_blank";
   enlace.rel = "noopener noreferrer";
   enlace.setAttribute("aria-label", "Escribir por WhatsApp");
   enlace.innerHTML = `
-    <span class="whatsapp-widget__label">¿Tienes alguna duda? Escríbenos</span>
+    <span class="whatsapp-widget__label">QUIERO APARTAR POR WHATSAPP</span>
     <span class="whatsapp-widget__icon" aria-hidden="true">☎</span>
   `;
   document.body.appendChild(enlace);

@@ -3,14 +3,6 @@
 
   if (!sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY)) return;
 
-  /* =========================================================
-     CONFIGURA AQUÍ TU CUENTA GRATIS DE CLOUDINARY
-     1. Crea una cuenta en https://cloudinary.com (plan free)
-     2. Copia tu "Cloud name" del Dashboard
-     3. Crea un Upload Preset con Signing Mode = Unsigned
-        (Settings → Upload → Upload presets → Add upload preset)
-     4. Pega ambos valores abajo
-     ========================================================= */
   const CLOUDINARY_CLOUD_NAME = "iuyecqml";
   const CLOUDINARY_UPLOAD_PRESET = "maternity_catalogo";
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;

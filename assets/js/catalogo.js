@@ -204,7 +204,7 @@
           <h3 class="tarjeta-nombre">${diseno.nombre}</h3>
           <p class="tarjeta-sub">${subtituloGrupo}</p>
           <p class="tarjeta-precio">$${precioNumero.toLocaleString("es-MX")} MXN</p>
-          <a class="btn-detalle" href="detalle.html?modelo=${encodeURIComponent(grupo.slug)}">Ver diseños</a>
+          <a class="btn-detalle" href="detalle.html?modelo=${encodeURIComponent(grupo.slug)}">QUIERO APARTARLO</a>
         </div>
       `;
 
