@@ -8,6 +8,15 @@
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
   const CATEGORY_DEFAULTS_STORAGE_KEY = "maternityRebornCategoryDefaults";
+    const progressStyleTag = document.createElement("style");
+  progressStyleTag.textContent = `
+    @keyframes catalogoAdminIndeterminado {
+      0%   { left: -40%; width: 40%; }
+      50%  { width: 60%; }
+      100% { left: 100%; width: 40%; }
+    }
+  `;
+  document.head.appendChild(progressStyleTag);
 
   const CATEGORIA_LABELS = {
     prematuro: "Prematuro",
@@ -158,6 +167,15 @@
         </div>
 
         <div class="catalogo-admin-gallery-head"><label class="field-label" for="catalogo-admin-gallery-files">Imágenes del producto</label><button type="button" class="btn-secondary catalogo-admin-add-images" id="catalogo-admin-add-images">Añadir imágenes</button></div>
+        <div id="catalogo-admin-upload-progress" hidden style="margin:8px 0 14px;">
+          <div style="display:flex;justify-content:space-between;font-size:0.85em;color:#666;margin-bottom:4px;">
+            <span id="catalogo-admin-upload-progress-label">Subiendo...</span>
+            <span id="catalogo-admin-upload-progress-percent">0%</span>
+          </div>
+          <div style="width:100%;height:8px;border-radius:999px;background:rgba(0,0,0,0.08);overflow:hidden;">
+            <div id="catalogo-admin-upload-progress-bar" style="height:100%;width:0%;background:linear-gradient(90deg,#a97fb3,#7c5a92);border-radius:999px;transition:width 0.2s ease;"></div>
+          </div>
+        </div>
         <input class="catalogo-admin-file-hidden" id="catalogo-admin-gallery-files" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
         <div class="catalogo-admin-gallery" id="catalogo-admin-gallery" aria-live="polite"></div>
         <p class="catalogo-admin-hint" id="catalogo-admin-upload-hint">Arrastra para ordenar. La primera imagen será la portada. Sólo JPEG, JPG o PNG de máximo 5 MB.</p>
@@ -165,7 +183,13 @@
         <label class="catalogo-admin-check"><input id="catalogo-admin-new" type="checkbox"> Marcar como nuevo</label>
         <label class="catalogo-admin-check"><input id="catalogo-admin-promotion" type="checkbox"> Mostrar banner de promoción</label>
         <div class="catalogo-admin-actions"><button type="submit" class="btn-primary">Guardar cambios</button><button type="button" class="btn-secondary" id="catalogo-admin-cancel">Cancelar</button></div>
-        <p class="admin-error" id="catalogo-admin-message" role="status" hidden></p>
+        <div id="catalogo-admin-save-progress" hidden style="margin:10px 0;">
+          <div style="font-size:0.85em;color:#666;margin-bottom:4px;">Guardando en Google Sheets...</div>
+          <div style="position:relative;width:100%;height:8px;border-radius:999px;background:rgba(0,0,0,0.08);overflow:hidden;">
+            <div id="catalogo-admin-save-progress-bar" style="position:absolute;top:0;height:100%;width:40%;left:-40%;background:linear-gradient(90deg,#a97fb3,#7c5a92);border-radius:999px;animation:catalogoAdminIndeterminado 1.1s ease-in-out infinite;"></div>
+  </div>
+</div>
+<p class="admin-error" id="catalogo-admin-message" role="status" hidden></p>
       </form>
     </div>
   `;
@@ -211,6 +235,37 @@
   const newCategoryMessage = overlay.querySelector("#catalogo-admin-new-cat-message");
   const newCategorySaveBtn = overlay.querySelector("#catalogo-admin-new-cat-save");
   const newCategoryCancelBtn = overlay.querySelector("#catalogo-admin-new-cat-cancel");
+    const uploadProgressWrap = overlay.querySelector("#catalogo-admin-upload-progress");
+  const uploadProgressBar = overlay.querySelector("#catalogo-admin-upload-progress-bar");
+  const uploadProgressLabel = overlay.querySelector("#catalogo-admin-upload-progress-label");
+  const uploadProgressPercent = overlay.querySelector("#catalogo-admin-upload-progress-percent");
+  const saveProgressWrap = overlay.querySelector("#catalogo-admin-save-progress");
+
+  function mostrarProgresoSubida(label) {
+    uploadProgressLabel.textContent = label;
+    uploadProgressPercent.textContent = "0%";
+    uploadProgressBar.style.width = "0%";
+    uploadProgressWrap.hidden = false;
+  }
+
+  function actualizarProgresoSubida(percent, label) {
+    if (label) uploadProgressLabel.textContent = label;
+    const clamped = Math.max(0, Math.min(100, percent));
+    uploadProgressBar.style.width = `${clamped}%`;
+    uploadProgressPercent.textContent = `${Math.round(clamped)}%`;
+  }
+
+  function ocultarProgresoSubida() {
+    uploadProgressWrap.hidden = true;
+  }
+
+  function mostrarProgresoGuardado() {
+    saveProgressWrap.hidden = false;
+  }
+
+  function ocultarProgresoGuardado() {
+    saveProgressWrap.hidden = true;
+  }
 
   let editingProduct = null;
   let selectedIds = new Set();
@@ -245,28 +300,48 @@
     );
   }
 
-  async function subirImagenCloudinary(file) {
-    if (!file) return "";
-    validarImagen(file);
-    if (!cloudinaryConfigurado()) {
-      throw new Error("Falta configurar Cloudinary en catalogo-admin.js (CLOUDINARY_CLOUD_NAME / CLOUDINARY_UPLOAD_PRESET).");
-    }
+  function subirImagenCloudinary(file, onProgress) {
+    return new Promise((resolve, reject) => {
+      try {
+        validarImagen(file);
+      } catch (error) {
+        reject(error);
+        return;
+      }
+      if (!cloudinaryConfigurado()) {
+        reject(new Error("Falta configurar Cloudinary en catalogo-admin.js (CLOUDINARY_CLOUD_NAME / CLOUDINARY_UPLOAD_PRESET)."));
+        return;
+      }
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
 
-    const response = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-      method: "POST",
-      body: formData
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`);
+
+      xhr.upload.addEventListener("progress", (event) => {
+        if (event.lengthComputable && onProgress) {
+          onProgress((event.loaded / event.total) * 100);
+        }
+      });
+
+      xhr.onload = () => {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          if (xhr.status >= 200 && xhr.status < 300 && data.secure_url) {
+            resolve(data.secure_url);
+          } else {
+            reject(new Error(data?.error?.message || "No se pudo subir la imagen a Cloudinary."));
+          }
+        } catch (error) {
+          reject(new Error("Respuesta inválida de Cloudinary."));
+        }
+      };
+
+      xhr.onerror = () => reject(new Error("No se pudo conectar con Cloudinary."));
+      xhr.send(formData);
     });
-    const data = await response.json();
-
-    if (!response.ok || !data.secure_url) {
-      throw new Error(data?.error?.message || "No se pudo subir la imagen a Cloudinary.");
-    }
-
-    return data.secure_url;
   }
 
   function validarImagen(file) {
@@ -480,7 +555,33 @@
     });
 
     galleryImages = imagenesUnicas([product?.imagen, ...(product?.fotos || [])]);
-    imageFileInput.value = "";
+      imageFileInput.addEventListener("change", async () => {
+        const files = [...imageFileInput.files];
+        if (!files.length) return;
+        const message = overlay.querySelector("#catalogo-admin-message");
+        message.hidden = true;
+
+        try {
+          files.forEach(validarImagen);
+          for (let index = 0; index < files.length; index++) {
+            const file = files[index];
+            const etiqueta = `Subiendo imagen ${index + 1} de ${files.length}: ${file.name}`;
+            mostrarProgresoSubida(etiqueta);
+            const url = await subirImagenCloudinary(file, (percent) => {
+              actualizarProgresoSubida(percent, etiqueta);
+            });
+            galleryImages.push(url);
+          }
+          ocultarProgresoSubida();
+          renderImageGallery();
+          } catch (error) {
+            ocultarProgresoSubida();
+            message.textContent = error.message || "No se pudieron subir las imágenes.";
+            message.hidden = false;
+          } finally {
+          imageFileInput.value = "";
+        }
+      });
     renderImageGallery();
     overlay.querySelector("#catalogo-admin-available").checked = product ? product.disponible !== false : true;
     overlay.querySelector("#catalogo-admin-new").checked = Boolean(product?.esNuevo);
@@ -739,6 +840,7 @@
     const message = overlay.querySelector("#catalogo-admin-message");
     saveButton.disabled = true;
     saveButton.textContent = "Guardando...";
+    mostrarProgresoGuardado();
 
     const respaldo = CATALOGO.slice();
 
@@ -804,6 +906,7 @@
     } finally {
       saveButton.disabled = false;
       saveButton.textContent = "Guardar cambios";
+      ocultarProgresoGuardado();
     }
   });
 })();
