@@ -69,6 +69,14 @@
       <p class="eyebrow">Editor de catálogo</p>
       <h2 id="catalogo-admin-title">Editar producto</h2>
       <p class="catalogo-admin-storage-note" id="catalogo-admin-storage-note" hidden></p>
+      <div class="catalogo-admin-bulk-bar" id="catalogo-admin-bulk-bar">
+        <label class="catalogo-admin-select-all">
+          <input type="checkbox" id="catalogo-admin-select-all-input">
+          Seleccionar todo
+        </label>
+        <span id="catalogo-admin-bulk-count">0 seleccionados</span>
+        <button type="button" class="catalogo-admin-delete" id="catalogo-admin-bulk-delete" disabled>Eliminar seleccionados</button>
+      </div>
       <div class="catalogo-admin-products" id="catalogo-admin-products"></div>
       <form id="catalogo-admin-form" class="catalogo-admin-form" hidden>
         <input type="hidden" id="catalogo-admin-id">
@@ -77,6 +85,7 @@
         <label class="field-label" for="catalogo-admin-description">Descripción</label>
         <textarea class="field-input" id="catalogo-admin-description" rows="3" required></textarea>
         <div class="catalogo-admin-fields">
+          <div><label class="field-label" for="catalogo-admin-code">Código</label><input class="field-input" id="catalogo-admin-code" required></div>
           <div><label class="field-label" for="catalogo-admin-category">Categoría</label><div class="catalogo-admin-category-control"><select class="field-input" id="catalogo-admin-category"></select><button type="button" class="btn-secondary" id="catalogo-admin-new-category">+ Nueva categoría</button></div></div>
           <div><label class="field-label" for="catalogo-admin-price">Precio MXN</label><input class="field-input" id="catalogo-admin-price" type="number" min="0" step="1" required></div>
           <div><label class="field-label" for="catalogo-admin-size">Talla</label><input class="field-input" id="catalogo-admin-size" required></div>
@@ -110,9 +119,22 @@
   const storageNote = overlay.querySelector("#catalogo-admin-storage-note");
   const imageGallery = overlay.querySelector("#catalogo-admin-gallery");
   const imageFileInput = overlay.querySelector("#catalogo-admin-gallery-files");
+  const bulkCount = overlay.querySelector("#catalogo-admin-bulk-count");
+  const bulkDeleteBtn = overlay.querySelector("#catalogo-admin-bulk-delete");
+  const selectAllCheckbox = overlay.querySelector("#catalogo-admin-select-all-input");
   let editingProduct = null;
+  let selectedIds = new Set();
   let galleryImages = [];
   let draggedImageIndex = null;
+
+  function actualizarBarraSeleccion() {
+    selectedIds = new Set([...selectedIds].filter((id) => CATALOGO.some((item) => String(item.id) === id)));
+    const count = selectedIds.size;
+    bulkCount.textContent = `${count} seleccionado${count === 1 ? "" : "s"}`;
+    bulkDeleteBtn.disabled = count === 0;
+    selectAllCheckbox.checked = CATALOGO.length > 0 && count === CATALOGO.length;
+    selectAllCheckbox.indeterminate = count > 0 && count < CATALOGO.length;
+  }
 
   function cloudinaryConfigurado() {
     return Boolean(
@@ -234,6 +256,7 @@
     overlay.querySelector("#catalogo-admin-title").textContent = product ? `Editar ${product.nombre}` : "Agregar producto";
     overlay.querySelector("#catalogo-admin-id").value = product ? product.id : "";
     overlay.querySelector("#catalogo-admin-name").value = product?.nombre || "";
+    overlay.querySelector("#catalogo-admin-code").value = product?.codigo || "";
     overlay.querySelector("#catalogo-admin-description").value = product?.descripcion || "";
     actualizarOpcionesCategoria(product?.categorias?.[0] || "recien_nacido");
     overlay.querySelector("#catalogo-admin-price").value = product?.precio || "";
@@ -252,6 +275,7 @@
   function renderProductList() {
     if (!CATALOGO.length) {
       products.innerHTML = '<p class="catalogo-admin-empty">Todavía no hay productos en el catálogo.</p>';
+      actualizarBarraSeleccion();
       return;
     }
 
@@ -263,6 +287,9 @@
 
       return `
         <div class="catalogo-admin-card" data-id="${product.id}">
+          <label class="catalogo-admin-select">
+            <input type="checkbox" class="catalogo-admin-select-input" data-id="${product.id}" ${selectedIds.has(String(product.id)) ? "checked" : ""}>
+          </label>
           <div class="catalogo-admin-card-image">
             <img src="${product.imagen || ""}" alt="" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0'">
             ${product.esNuevo ? '<span class="catalogo-admin-tag is-new">Nuevo</span>' : ""}
@@ -271,7 +298,7 @@
           </div>
           <div class="catalogo-admin-card-body">
             <h3>${product.nombre}</h3>
-            <p class="catalogo-admin-card-meta">${categoriaLabel}</p>
+            <p class="catalogo-admin-card-meta">${categoriaLabel}${product.codigo ? ` · ${product.codigo}` : ""}</p>
             <p class="catalogo-admin-card-price">$${precio} MXN</p>
           </div>
           <div class="catalogo-admin-card-actions">
@@ -292,6 +319,17 @@
     products.querySelectorAll(".catalogo-admin-delete").forEach((button) => {
       button.addEventListener("click", () => eliminarProducto(button.dataset.id));
     });
+
+    products.querySelectorAll(".catalogo-admin-select-input").forEach((checkbox) => {
+      checkbox.addEventListener("change", () => {
+        const id = checkbox.dataset.id;
+        if (checkbox.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+        actualizarBarraSeleccion();
+      });
+    });
+
+    actualizarBarraSeleccion();
   }
 
   async function eliminarProducto(id) {
@@ -314,6 +352,7 @@
       return;
     }
 
+    selectedIds.delete(String(id));
     window.dispatchEvent(new Event("catalogo:render"));
     renderProductList();
     actualizarAvisoTamano();
@@ -434,6 +473,39 @@
     if (event.key === "Escape" && !overlay.hidden) closeEditor();
   });
 
+  selectAllCheckbox.addEventListener("change", () => {
+    if (selectAllCheckbox.checked) {
+      selectedIds = new Set(CATALOGO.map((item) => String(item.id)));
+    } else {
+      selectedIds.clear();
+    }
+    renderProductList();
+  });
+
+  bulkDeleteBtn.addEventListener("click", async () => {
+    if (!selectedIds.size) return;
+    const confirmado = window.confirm(`¿Eliminar ${selectedIds.size} producto(s) del catálogo? Esta acción no se puede deshacer.`);
+    if (!confirmado) return;
+
+    const respaldo = CATALOGO.slice();
+    const idsAEliminar = new Set(selectedIds);
+    CATALOGO.splice(0, CATALOGO.length, ...CATALOGO.filter((item) => !idsAEliminar.has(String(item.id))));
+
+    const resultado = guardarCatalogo();
+    const remoto = await guardarCatalogoRemoto(sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY));
+    if (!resultado.ok || !remoto.ok) {
+      CATALOGO.splice(0, CATALOGO.length, ...respaldo);
+      guardarCatalogo();
+      alert(`No se pudieron eliminar los productos: ${remoto.error || "falló el guardado local"}`);
+      return;
+    }
+
+    selectedIds.clear();
+    window.dispatchEvent(new Event("catalogo:render"));
+    renderProductList();
+    actualizarAvisoTamano();
+  });
+
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     const saveButton = form.querySelector("button[type=submit]");
@@ -451,8 +523,12 @@
       const nombre = overlay.querySelector("#catalogo-admin-name").value.trim();
       if (!nombre) throw new Error("Agrega un nombre para el producto.");
 
+      const codigo = overlay.querySelector("#catalogo-admin-code").value.trim();
+      if (!codigo) throw new Error("Agrega un código para el producto.");
+
       const product = {
         id: editingProduct ? editingProduct.id : Math.max(0, ...CATALOGO.map((item) => Number(item.id) || 0)) + 1,
+        codigo,
         nombre,
         categoria: overlay.querySelector("#catalogo-admin-category").value,
         descripcion: overlay.querySelector("#catalogo-admin-description").value.trim(),
