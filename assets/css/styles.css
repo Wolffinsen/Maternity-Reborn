@@ -61,7 +61,8 @@
 }
 
 @keyframes ticker-scroll {
-  to { transform: translateX(-50%); }
+  from { transform: translateX(-50%); }
+  to { transform: translateX(0); }
 }
 
 @keyframes catalog-slide-next {
@@ -102,6 +103,7 @@ img { max-width: 100%; display: block; }
 @media (prefers-reduced-motion: reduce) {
   html, body { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; }
+  .ticker-track { animation: ticker-scroll 32s linear infinite !important; }
 }
 
 /* Etiquetas y adornos */
@@ -348,7 +350,7 @@ img { max-width: 100%; display: block; }
   max-height: 650px;
   overflow: hidden;
   border: 1px solid rgba(201, 163, 90, .5);
-  border-radius: 999px 999px 8px 8px;
+  border-radius: 18px;
   background: var(--rosa-empolvado);
   box-shadow:
     0 0 0 10px rgba(255,255,255,.55),
