@@ -7,6 +7,7 @@
   const CLOUDINARY_UPLOAD_PRESET = "maternity_catalogo";
   const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
   const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
+  const CATEGORY_DEFAULTS_STORAGE_KEY = "maternityRebornCategoryDefaults";
 
   const CATEGORIA_LABELS = {
     prematuro: "Prematuro",
@@ -36,9 +37,34 @@
     const categories = obtenerCategorias();
     select.innerHTML = categories.map((category) => `<option value="${category}">${CATEGORIA_LABELS[category] || category.replace(/_/g, " ")}</option>`).join("");
     if (selectedCategory && !categories.includes(selectedCategory)) {
-      select.insertAdjacentHTML("beforeend", `<option value="${selectedCategory}">${selectedCategory.replace(/_/g, " ")}</option>`);
+      select.insertAdjacentHTML("beforeend", `<option value="${selectedCategory}">${CATEGORIA_LABELS[selectedCategory] || selectedCategory.replace(/_/g, " ")}</option>`);
     }
     select.value = selectedCategory || categories[0] || "recien_nacido";
+  }
+
+  // ===== Valores estándar por categoría (talla, material, descripción, qué incluye) =====
+  // Se guardan localmente en el navegador del admin; no viajan a Google Sheets,
+  // sólo se usan para prellenar el formulario cuando eliges/creas una categoría.
+  function obtenerDefaultsCategorias() {
+    try {
+      return JSON.parse(localStorage.getItem(CATEGORY_DEFAULTS_STORAGE_KEY) || "{}");
+    } catch (error) {
+      return {};
+    }
+  }
+
+  function guardarDefaultsCategoria(key, defaults) {
+    const todos = obtenerDefaultsCategorias();
+    todos[key] = defaults;
+    try {
+      localStorage.setItem(CATEGORY_DEFAULTS_STORAGE_KEY, JSON.stringify(todos));
+    } catch (error) {
+      console.warn("No se pudieron guardar los valores estándar de la categoría:", error);
+    }
+  }
+
+  function obtenerDefaultsCategoria(key) {
+    return obtenerDefaultsCategorias()[key] || null;
   }
 
   // Aviso de tamaño en localStorage (ahora solo guardamos URLs de texto,
@@ -69,6 +95,15 @@
       <p class="eyebrow">Editor de catálogo</p>
       <h2 id="catalogo-admin-title">Editar producto</h2>
       <p class="catalogo-admin-storage-note" id="catalogo-admin-storage-note" hidden></p>
+
+      <div class="catalogo-admin-grid-header" id="catalogo-admin-grid-header" style="display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;">
+        <label class="search-field" for="catalogo-admin-search" style="flex:1;min-width:200px;">
+          <span class="search-label">Buscar producto</span>
+          <input id="catalogo-admin-search" type="search" placeholder="Nombre o código" autocomplete="off">
+        </label>
+        <button type="button" class="btn-primary" id="catalogo-admin-add-in-grid">Agregar producto</button>
+      </div>
+
       <div class="catalogo-admin-bulk-bar" id="catalogo-admin-bulk-bar">
         <label class="catalogo-admin-select-all">
           <input type="checkbox" id="catalogo-admin-select-all-input">
@@ -78,19 +113,50 @@
         <button type="button" class="catalogo-admin-delete" id="catalogo-admin-bulk-delete" disabled>Eliminar seleccionados</button>
       </div>
       <div class="catalogo-admin-products" id="catalogo-admin-products"></div>
+
       <form id="catalogo-admin-form" class="catalogo-admin-form" hidden>
         <input type="hidden" id="catalogo-admin-id">
         <label class="field-label" for="catalogo-admin-name">Nombre</label>
         <input class="field-input" id="catalogo-admin-name" required>
-        <label class="field-label" for="catalogo-admin-description">Descripción</label>
-        <textarea class="field-input" id="catalogo-admin-description" rows="3" required></textarea>
+        <textarea id="catalogo-admin-description" hidden></textarea>
+
         <div class="catalogo-admin-fields">
           <div><label class="field-label" for="catalogo-admin-code">Código</label><input class="field-input" id="catalogo-admin-code" required></div>
-          <div><label class="field-label" for="catalogo-admin-category">Categoría</label><div class="catalogo-admin-category-control"><select class="field-input" id="catalogo-admin-category"></select><button type="button" class="btn-secondary" id="catalogo-admin-new-category">+ Nueva categoría</button></div></div>
+          <div>
+            <label class="field-label" for="catalogo-admin-category">Categoría</label>
+            <div class="catalogo-admin-category-control">
+              <select class="field-input" id="catalogo-admin-category"></select>
+              <button type="button" class="btn-primary catalogo-admin-new-category-btn" id="catalogo-admin-new-category">+ Nueva categoría</button>
+              <button type="button" class="btn-secondary" id="catalogo-admin-edit-category">Editar estándar</button>
+            </div>
+          </div>
           <div><label class="field-label" for="catalogo-admin-price">Precio MXN</label><input class="field-input" id="catalogo-admin-price" type="number" min="0" step="1" required></div>
-          <div><label class="field-label" for="catalogo-admin-size">Talla</label><input class="field-input" id="catalogo-admin-size" required></div>
-          <div><label class="field-label" for="catalogo-admin-material">Material</label><input class="field-input" id="catalogo-admin-material" required></div>
         </div>
+
+        <input type="hidden" id="catalogo-admin-size">
+        <input type="hidden" id="catalogo-admin-material">
+
+        <div class="catalogo-admin-category-summary" id="catalogo-admin-category-summary" style="border:1px solid rgba(0,0,0,0.08);border-radius:12px;padding:14px 16px;margin:4px 0 16px;background:rgba(0,0,0,0.02);font-size:0.9em;color:#555;line-height:1.5;"></div>
+
+        <div class="catalogo-admin-category-card" id="catalogo-admin-category-card" hidden style="border:1px solid rgba(0,0,0,0.12);border-radius:12px;padding:16px;margin:4px 0 16px;background:rgba(0,0,0,0.02);">
+          <p class="eyebrow" id="catalogo-admin-category-card-title">Nueva categoría estándar</p>
+          <label class="field-label" for="catalogo-admin-new-cat-name">Nombre de la categoría</label>
+          <input class="field-input" id="catalogo-admin-new-cat-name" placeholder="Ej. 6 meses">
+          <label class="field-label" for="catalogo-admin-new-cat-talla">Talla / medida estándar</label>
+          <textarea class="field-input" id="catalogo-admin-new-cat-talla" rows="2" placeholder="Ej. 45 cm&#10;Peso 1.800 kg aprox."></textarea>
+          <label class="field-label" for="catalogo-admin-new-cat-material">Material estándar</label>
+          <input class="field-input" id="catalogo-admin-new-cat-material" placeholder="Ej. Vinilo reborn">
+          <label class="field-label" for="catalogo-admin-new-cat-descripcion">Descripción estándar</label>
+          <textarea class="field-input" id="catalogo-admin-new-cat-descripcion" rows="3" placeholder="Descripción que llevarán todos los bebés de esta categoría"></textarea>
+          <label class="field-label" for="catalogo-admin-new-cat-incluye">Qué incluye (una línea por elemento)</label>
+          <textarea class="field-input" id="catalogo-admin-new-cat-incluye" rows="3" placeholder="Bebé Reborn con ropita, chupón y cobija&#10;Ropita extra y accesorios&#10;Hoja de nacimiento y certificado"></textarea>
+          <p class="admin-error" id="catalogo-admin-new-cat-message" role="status" hidden></p>
+          <div class="catalogo-admin-actions">
+            <button type="button" class="btn-primary" id="catalogo-admin-new-cat-save">Guardar categoría</button>
+            <button type="button" class="btn-secondary" id="catalogo-admin-new-cat-cancel">Cancelar</button>
+          </div>
+        </div>
+
         <div class="catalogo-admin-gallery-head"><label class="field-label" for="catalogo-admin-gallery-files">Imágenes del producto</label><button type="button" class="btn-secondary catalogo-admin-add-images" id="catalogo-admin-add-images">Añadir imágenes</button></div>
         <input class="catalogo-admin-file-hidden" id="catalogo-admin-gallery-files" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" multiple>
         <div class="catalogo-admin-gallery" id="catalogo-admin-gallery" aria-live="polite"></div>
@@ -116,24 +182,60 @@
 
   const products = overlay.querySelector("#catalogo-admin-products");
   const form = overlay.querySelector("#catalogo-admin-form");
+  form.addEventListener("keydown", (event) => {
+    if (event.key === "Enter" && event.target.tagName !== "TEXTAREA") {
+      event.preventDefault();
+    }
+  });
   const storageNote = overlay.querySelector("#catalogo-admin-storage-note");
   const imageGallery = overlay.querySelector("#catalogo-admin-gallery");
   const imageFileInput = overlay.querySelector("#catalogo-admin-gallery-files");
   const bulkCount = overlay.querySelector("#catalogo-admin-bulk-count");
   const bulkDeleteBtn = overlay.querySelector("#catalogo-admin-bulk-delete");
   const selectAllCheckbox = overlay.querySelector("#catalogo-admin-select-all-input");
+  const bulkBar = overlay.querySelector("#catalogo-admin-bulk-bar");
+  const gridHeader = overlay.querySelector("#catalogo-admin-grid-header");
+  const searchInput = overlay.querySelector("#catalogo-admin-search");
+  const addInGridBtn = overlay.querySelector("#catalogo-admin-add-in-grid");
+  const categorySelect = overlay.querySelector("#catalogo-admin-category");
+  const categoryCard = overlay.querySelector("#catalogo-admin-category-card");
+  const categoryCardTitle = overlay.querySelector("#catalogo-admin-category-card-title");
+  const categorySummary = overlay.querySelector("#catalogo-admin-category-summary");
+  const newCategoryBtn = overlay.querySelector("#catalogo-admin-new-category");
+  const editCategoryBtn = overlay.querySelector("#catalogo-admin-edit-category");
+  const newCategoryNameInput = overlay.querySelector("#catalogo-admin-new-cat-name");
+  const newCategoryTallaInput = overlay.querySelector("#catalogo-admin-new-cat-talla");
+  const newCategoryMaterialInput = overlay.querySelector("#catalogo-admin-new-cat-material");
+  const newCategoryDescInput = overlay.querySelector("#catalogo-admin-new-cat-descripcion");
+  const newCategoryIncluyeInput = overlay.querySelector("#catalogo-admin-new-cat-incluye");
+  const newCategoryMessage = overlay.querySelector("#catalogo-admin-new-cat-message");
+  const newCategorySaveBtn = overlay.querySelector("#catalogo-admin-new-cat-save");
+  const newCategoryCancelBtn = overlay.querySelector("#catalogo-admin-new-cat-cancel");
+
   let editingProduct = null;
   let selectedIds = new Set();
   let galleryImages = [];
   let draggedImageIndex = null;
+  let categoriaIncluyeActual = null;
 
-  function actualizarBarraSeleccion() {
+  function obtenerProductosFiltrados() {
+    const term = (searchInput.value || "").trim().toLowerCase();
+    if (!term) return CATALOGO;
+    return CATALOGO.filter((product) => {
+      const categoriaLabel = (product.categorias || []).join(" ");
+      return [product.nombre, product.codigo, categoriaLabel].filter(Boolean).join(" ").toLowerCase().includes(term);
+    });
+  }
+
+  function actualizarBarraSeleccion(filtrados) {
+    const lista = filtrados || CATALOGO;
     selectedIds = new Set([...selectedIds].filter((id) => CATALOGO.some((item) => String(item.id) === id)));
     const count = selectedIds.size;
     bulkCount.textContent = `${count} seleccionado${count === 1 ? "" : "s"}`;
     bulkDeleteBtn.disabled = count === 0;
-    selectAllCheckbox.checked = CATALOGO.length > 0 && count === CATALOGO.length;
-    selectAllCheckbox.indeterminate = count > 0 && count < CATALOGO.length;
+    const visibleSelectedCount = lista.filter((item) => selectedIds.has(String(item.id))).length;
+    selectAllCheckbox.checked = lista.length > 0 && visibleSelectedCount === lista.length;
+    selectAllCheckbox.indeterminate = visibleSelectedCount > 0 && visibleSelectedCount < lista.length;
   }
 
   function cloudinaryConfigurado() {
@@ -248,20 +350,135 @@
     });
   }
 
+  // ===== Aplicar valores estándar de categoría al formulario y a la tarjeta resumen =====
+  function aplicarDefaultsCategoria(categoryKey, fallback = {}) {
+    const defaults = obtenerDefaultsCategoria(categoryKey);
+    categoriaIncluyeActual = defaults?.incluye || fallback.incluye || null;
+
+    const tallaInput = overlay.querySelector("#catalogo-admin-size");
+    const descInput = overlay.querySelector("#catalogo-admin-description");
+    const materialInput = overlay.querySelector("#catalogo-admin-material");
+
+    const talla = defaults?.talla || fallback.talla || "";
+    const descripcion = defaults?.descripcion || fallback.descripcion || "";
+    const material = defaults?.material || fallback.material || "Vinilo reborn";
+
+    tallaInput.value = talla;
+    descInput.value = descripcion;
+    materialInput.value = material;
+
+    renderCategorySummary({ talla, descripcion, material, incluye: categoriaIncluyeActual });
+  }
+
+  function renderCategorySummary({ talla, descripcion, material, incluye }) {
+    const incluyeHtml = (incluye || []).length
+      ? `<ul style="margin:4px 0 0;padding-left:18px;">${incluye.map((item) => `<li>${item}</li>`).join("")}</ul>`
+      : '<span style="color:#a8a8a8;">Sin definir aún.</span>';
+
+    categorySummary.innerHTML = `
+      <strong>Estándar de esta categoría</strong><br>
+      <strong>Talla:</strong><br>${(talla || "—").replace(/\n/g, "<br>")} &nbsp;·&nbsp; <strong>Material:</strong> ${material || "—"}<br>
+      <strong>Descripción:</strong> ${descripcion || "—"}<br>
+      <strong>Incluye:</strong> ${incluyeHtml}
+    `;
+  }
+
+  categorySelect.addEventListener("change", (event) => aplicarDefaultsCategoria(event.target.value));
+
+  function abrirTarjetaCategoria(editKey = null) {
+    categoryCard.hidden = false;
+    newCategoryBtn.setAttribute("aria-expanded", "true");
+
+    if (editKey) {
+      const defaults = obtenerDefaultsCategoria(editKey) || {};
+      categoryCardTitle.textContent = "Editar categoría estándar";
+      newCategoryNameInput.value = CATEGORIA_LABELS[editKey] || editKey.replace(/_/g, " ");
+      newCategoryNameInput.disabled = true;
+      newCategoryTallaInput.value = defaults.talla || "";
+      newCategoryMaterialInput.value = defaults.material || "Vinilo reborn";
+      newCategoryDescInput.value = defaults.descripcion || "";
+      newCategoryIncluyeInput.value = (defaults.incluye || []).join("\n");
+      categoryCard.dataset.editingKey = editKey;
+    } else {
+      categoryCardTitle.textContent = "Nueva categoría estándar";
+      newCategoryNameInput.value = "";
+      newCategoryNameInput.disabled = false;
+      newCategoryTallaInput.value = "";
+      newCategoryMaterialInput.value = "Vinilo reborn";
+      newCategoryDescInput.value = "";
+      newCategoryIncluyeInput.value = "";
+      delete categoryCard.dataset.editingKey;
+    }
+    newCategoryMessage.hidden = true;
+    newCategoryNameInput.focus();
+  }
+
+  function cerrarTarjetaCategoria() {
+    categoryCard.hidden = true;
+    newCategoryBtn.setAttribute("aria-expanded", "false");
+    newCategoryNameInput.disabled = false;
+    delete categoryCard.dataset.editingKey;
+  }
+
+  newCategoryBtn.addEventListener("click", () => {
+    if (categoryCard.hidden || categoryCard.dataset.editingKey) abrirTarjetaCategoria(null);
+    else cerrarTarjetaCategoria();
+  });
+
+  editCategoryBtn.addEventListener("click", () => {
+    const currentKey = categorySelect.value;
+    if (!currentKey) return;
+    if (categoryCard.hidden || !categoryCard.dataset.editingKey) abrirTarjetaCategoria(currentKey);
+    else cerrarTarjetaCategoria();
+  });
+
+  newCategoryCancelBtn.addEventListener("click", cerrarTarjetaCategoria);
+
+  newCategorySaveBtn.addEventListener("click", () => {
+    const editingKey = categoryCard.dataset.editingKey || null;
+    const label = newCategoryNameInput.value.trim();
+    const key = editingKey || crearClaveCategoria(label);
+    if (!key) {
+      newCategoryMessage.textContent = "Escribe un nombre para la categoría.";
+      newCategoryMessage.hidden = false;
+      return;
+    }
+    if (!editingKey) CATEGORIA_LABELS[key] = label;
+
+    const defaults = {
+      talla: newCategoryTallaInput.value.trim(),
+      material: newCategoryMaterialInput.value.trim() || "Vinilo reborn",
+      descripcion: newCategoryDescInput.value.trim(),
+      incluye: newCategoryIncluyeInput.value.split("\n").map((line) => line.trim()).filter(Boolean)
+    };
+    guardarDefaultsCategoria(key, defaults);
+    actualizarOpcionesCategoria(key);
+    aplicarDefaultsCategoria(key);
+    cerrarTarjetaCategoria();
+  });
+
   function openEditor(product) {
     editingProduct = product || null;
     overlay.hidden = false;
     form.hidden = false;
     products.hidden = true;
+    bulkBar.style.display = "none";
+    gridHeader.style.display = "none";
+    cerrarTarjetaCategoria();
     overlay.querySelector("#catalogo-admin-title").textContent = product ? `Editar ${product.nombre}` : "Agregar producto";
     overlay.querySelector("#catalogo-admin-id").value = product ? product.id : "";
     overlay.querySelector("#catalogo-admin-name").value = product?.nombre || "";
     overlay.querySelector("#catalogo-admin-code").value = product?.codigo || "";
-    overlay.querySelector("#catalogo-admin-description").value = product?.descripcion || "";
     actualizarOpcionesCategoria(product?.categorias?.[0] || "recien_nacido");
     overlay.querySelector("#catalogo-admin-price").value = product?.precio || "";
-    overlay.querySelector("#catalogo-admin-size").value = product?.talla || "Talla estándar";
-    overlay.querySelector("#catalogo-admin-material").value = product?.material || "Vinilo reborn";
+
+    aplicarDefaultsCategoria(categorySelect.value, {
+      talla: product?.talla,
+      descripcion: product?.descripcion,
+      material: product?.material,
+      incluye: product?.incluye
+    });
+
     galleryImages = imagenesUnicas([product?.imagen, ...(product?.fotos || [])]);
     imageFileInput.value = "";
     renderImageGallery();
@@ -273,13 +490,21 @@
   }
 
   function renderProductList() {
+    const filtrados = obtenerProductosFiltrados();
+
     if (!CATALOGO.length) {
       products.innerHTML = '<p class="catalogo-admin-empty">Todavía no hay productos en el catálogo.</p>';
-      actualizarBarraSeleccion();
+      actualizarBarraSeleccion([]);
       return;
     }
 
-    products.innerHTML = CATALOGO.map((product) => {
+    if (!filtrados.length) {
+      products.innerHTML = '<p class="catalogo-admin-empty">No encontramos productos con esa búsqueda.</p>';
+      actualizarBarraSeleccion(filtrados);
+      return;
+    }
+
+    products.innerHTML = filtrados.map((product) => {
       const categoriaKey = product.categorias?.[0] || "";
       const categoriaLabel = CATEGORIA_LABELS[categoriaKey] || categoriaKey.replace(/_/g, " ") || "Sin categoría";
       const precio = Number(product.precio || 0).toLocaleString("es-MX");
@@ -325,11 +550,11 @@
         const id = checkbox.dataset.id;
         if (checkbox.checked) selectedIds.add(id);
         else selectedIds.delete(id);
-        actualizarBarraSeleccion();
+        actualizarBarraSeleccion(filtrados);
       });
     });
 
-    actualizarBarraSeleccion();
+    actualizarBarraSeleccion(filtrados);
   }
 
   async function eliminarProducto(id) {
@@ -359,6 +584,9 @@
   }
 
   function showProductGrid() {
+    bulkBar.style.display = "";
+    gridHeader.style.display = "flex";
+    cerrarTarjetaCategoria();
     renderProductList();
     actualizarAvisoTamano();
     overlay.hidden = false;
@@ -371,6 +599,7 @@
     overlay.hidden = true;
     form.hidden = true;
     products.hidden = false;
+    cerrarTarjetaCategoria();
     editingProduct = null;
   }
 
@@ -426,12 +655,9 @@
 
   editor.querySelector("#catalogo-admin-add").addEventListener("click", () => openEditor(null));
   editor.querySelector("#catalogo-admin-manage").addEventListener("click", showProductGrid);
-  overlay.querySelector("#catalogo-admin-new-category").addEventListener("click", () => {
-    const label = window.prompt("Nombre de la nueva categoría:");
-    const key = crearClaveCategoria(label);
-    if (!key) return;
-    actualizarOpcionesCategoria(key);
-  });
+  addInGridBtn.addEventListener("click", () => openEditor(null));
+  searchInput.addEventListener("input", () => renderProductList());
+
   migrationInput.addEventListener("change", () => {
     migrarImagenesExistentes(migrationInput.files);
     migrationInput.value = "";
@@ -474,10 +700,11 @@
   });
 
   selectAllCheckbox.addEventListener("change", () => {
+    const filtrados = obtenerProductosFiltrados();
     if (selectAllCheckbox.checked) {
-      selectedIds = new Set(CATALOGO.map((item) => String(item.id)));
+      filtrados.forEach((item) => selectedIds.add(String(item.id)));
     } else {
-      selectedIds.clear();
+      filtrados.forEach((item) => selectedIds.delete(String(item.id)));
     }
     renderProductList();
   });
@@ -526,6 +753,13 @@
       const codigo = overlay.querySelector("#catalogo-admin-code").value.trim();
       if (!codigo) throw new Error("Agrega un código para el producto.");
 
+      const codigoDuplicado = CATALOGO.some((item) =>
+        item.codigo &&
+        item.codigo.trim().toLowerCase() === codigo.toLowerCase() &&
+        String(item.id) !== String(editingProduct?.id ?? "")
+      );
+      if (codigoDuplicado) throw new Error(`Ya existe un producto con el código "${codigo}". Usa un código distinto.`);
+
       const product = {
         id: editingProduct ? editingProduct.id : Math.max(0, ...CATALOGO.map((item) => Number(item.id) || 0)) + 1,
         codigo,
@@ -539,7 +773,8 @@
         talla: overlay.querySelector("#catalogo-admin-size").value.trim(),
         material: overlay.querySelector("#catalogo-admin-material").value.trim(),
         esNuevo: overlay.querySelector("#catalogo-admin-new").checked,
-        esOferta: overlay.querySelector("#catalogo-admin-promotion").checked
+        esOferta: overlay.querySelector("#catalogo-admin-promotion").checked,
+        incluye: categoriaIncluyeActual || editingProduct?.incluye || undefined
       };
       const normalized = crearDiseno(product);
       if (editingProduct) {

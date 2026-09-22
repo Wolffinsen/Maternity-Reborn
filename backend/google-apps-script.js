@@ -269,6 +269,7 @@ function createReservation(payload) {
   const nombreCliente = String(payload.nombreCliente || "").trim();
   const telefonoCliente = String(payload.telefonoCliente || "").trim();
   const diseno = String(payload.diseno || "").trim();
+  const codigo = String(payload.codigo || "").trim();
   const precio = Number(payload.precio);
   if (!nombreCliente || !telefonoCliente || !diseno || !Number.isFinite(precio) || precio <= 0) {
     return jsonResponse({ ok: false, error: "Los datos de la reserva están incompletos." });
@@ -290,6 +291,7 @@ function createReservation(payload) {
       case "cliente": return nombreCliente;
       case "telefono": return telefonoCliente;
       case "diseno": return diseno;
+      case "codigo": return codigo;
       case "precio": return precio;
       case "estado": return "activo";
       case "esreferencia": return referralSeller ? "Sí" : "No";
@@ -308,6 +310,7 @@ function createReservation(payload) {
   });
 }
 
+
 function readSalesRows() {
   const sheet = getSalesSheet();
   const values = sheet.getDataRange().getValues();
@@ -321,6 +324,7 @@ function readSalesRows() {
         folio: getCell(row, headers, ["folio"]),
         cliente: getCell(row, headers, ["cliente", "nombrecliente", "nombredelcliente", "nombre", "name"]),
         diseno: getCell(row, headers, ["diseno", "diseño", "producto"]),
+        codigo: getCell(row, headers, ["codigo"]),
         precio: Number(getCell(row, headers, ["precio", "total"]) || 0),
         estado: normalizeStatus(getCell(row, headers, ["estado", "estatus", "status"])),
         fecha: formatDate(getCell(row, headers, ["fecha", "timestamp", "fechadeapartado"])),
@@ -395,6 +399,7 @@ function saveCatalog(payload) {
         case "material": return product.material || "";
         case "esnuevo": return product.esNuevo === true;
         case "esoferta": return product.esOferta === true;
+        case "codigo": return product.codigo || "";
         default: return "";
       }
     });
@@ -439,7 +444,8 @@ function readCatalogRows() {
         talla: getCell(row, headers, ["talla"]),
         material: getCell(row, headers, ["material"]),
         esNuevo: String(getCell(row, headers, ["esnuevo"])).toLowerCase() === "true",
-        esOferta: String(getCell(row, headers, ["esoferta"])).toLowerCase() === "true"
+        esOferta: String(getCell(row, headers, ["esoferta"])).toLowerCase() === "true",
+        codigo: getCell(row, headers, ["codigo"])
       };
     });
 }
@@ -455,29 +461,39 @@ function getCatalogSheet() {
 }
 
 function ensureCatalogHeaders(sheet) {
-  const headers = ["ID", "Nombre", "Categoria", "Descripcion", "Precio", "Imagen", "Fotos", "Disponible", "Talla", "Material", "EsNuevo", "EsOferta"];
+  const headers = ["ID", "Nombre", "Categoria", "Descripcion", "Precio", "Imagen", "Fotos", "Disponible", "Talla", "Material", "EsNuevo", "EsOferta", "Codigo"];
   if (sheet.getLastRow() === 0 || sheet.getLastColumn() === 0) {
     sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
     return headers;
   }
 
-  const existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  let existingHeaders = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const missingHeaders = [];
+
   if (!existingHeaders.some(function (header) { return normalizeHeader(header) === "esoferta"; })) {
-    sheet.getRange(1, existingHeaders.length + 1).setValue("EsOferta");
-    return existingHeaders.concat(["EsOferta"]);
+    missingHeaders.push("EsOferta");
   }
+  if (!existingHeaders.some(function (header) { return normalizeHeader(header) === "codigo"; })) {
+    missingHeaders.push("Codigo");
+  }
+
+  if (missingHeaders.length) {
+    sheet.getRange(1, existingHeaders.length + 1, 1, missingHeaders.length).setValues([missingHeaders]);
+    existingHeaders = existingHeaders.concat(missingHeaders);
+  }
+
   return existingHeaders;
 }
 
 function ensureHeaders(sheet) {
   if (sheet.getLastRow() === 0) {
-    const headers = ["Fecha", "Folio", "Cliente", "Telefono", "Diseno", "Precio", "Estado", "Es referencia", "Codigo referencia", "Vendedor referencia"];
+    const headers = ["Fecha", "Folio", "Cliente", "Telefono", "Diseno", "Codigo", "Precio", "Estado", "Es referencia", "Codigo referencia", "Vendedor referencia"];
     sheet.appendRow(headers);
     return headers;
   }
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const requiredHeaders = ["Es referencia", "Codigo referencia", "Vendedor referencia"];
+  const requiredHeaders = ["Codigo", "Es referencia", "Codigo referencia", "Vendedor referencia"];
   const normalizedHeaders = headers.map(normalizeHeader);
   const missingHeaders = requiredHeaders.filter(function (header) {
     return normalizedHeaders.indexOf(normalizeHeader(header)) < 0;

@@ -75,11 +75,12 @@
       <section class="admin-view is-active" id="admin-sales-view" role="tabpanel">
         <div class="admin-panel">
           <div class="panel-heading">
-            <div>
-              <p class="eyebrow"><i></i>Operación</p>
-              <h3>Folios y apartados</h3>
+              <div>
+                <p class="eyebrow"><i></i>Operación</p>
+                <h3>Folios y apartados</h3>
+              </div>
+              <button class="btn-primary" id="btn-export-excel" type="button">Descargar Excel</button>
             </div>
-          </div>
           <div class="admin-search-field">
             <label class="search-label" for="admin-client-search">Buscar cliente</label>
             <input class="field-input" id="admin-client-search" type="search" placeholder="Nombre, folio o diseño">
@@ -87,9 +88,9 @@
           <div class="table-wrap">
             <table>
               <thead>
-                <tr><th>Folio</th><th>Cliente</th><th>Diseño</th><th>Precio</th><th>Estado</th><th>Fecha</th><th>Actualizar</th></tr>
+                <tr><th>Folio</th><th>Cliente</th><th>Diseño</th><th>Código</th><th>Precio</th><th>Estado</th><th>Fecha</th><th>Actualizar</th></tr>
               </thead>
-              <tbody id="admin-table-body"><tr><td colspan="7" class="table-empty">Cargando datos...</td></tr></tbody>
+              <tbody id="admin-table-body"><tr><td colspan="8" class="table-empty">Cargando datos...</td></tr></tbody>
             </table>
           </div>
           <div class="admin-sales-cards" id="admin-sales-cards"></div>
@@ -176,6 +177,11 @@
       <button class="anticipo-toast__close" id="admin-toast-close" type="button">Cerrar</button>
     </div>
   </main>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script defer src="assets/js/datos.js"></script>
+  <script defer src="assets/js/referral.js?v=20260915"></script>
+  <script defer src="assets/js/admin.js"></script>
 
   <script defer src="assets/js/datos.js"></script>
   <script defer src="assets/js/referral.js?v=20260915"></script>

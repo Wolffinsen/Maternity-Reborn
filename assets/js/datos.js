@@ -11,7 +11,8 @@
   talla,
   material = "Vinilo reborn",
   esNuevo = false,
-  esOferta = false
+  esOferta = false,
+  incluye          // <-- nuevo
 }) {
   return {
     id,
@@ -28,7 +29,7 @@
     talla: talla || "Talla estándar",
     material,
     cabello: "Detalle pintado / mohair según diseño.",
-    incluye: [
+    incluye: Array.isArray(incluye) && incluye.length ? incluye : [   // <-- modificado
       "Bebé Reborn con ropita, chupón y cobija.",
       "Ropita extra y accesorios según el diseño.",
       "Hoja de nacimiento y certificado de autenticidad."
@@ -128,7 +129,7 @@ cargarCatalogoGuardado();
 // TODO: Configure the business WhatsApp number here before publishing.
 const NUMERO_WHATSAPP = "5214423807369";
 const COSTO_APARTADO = 200;
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbyopEDWOlnSbF9TewXbeQNbCWwHfF_fnLH26W-Om5-HWFdSMmmnXwHLSN1yxQhRTgt3/exec";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzziJ-PzAEU426Vv-EvVyUdd54JN-39N0Rjen-D-cNvcHLiZGkjmaTqusmFu-0fy71c/exec";
 const CATALOGO_READY = new Promise((resolve) => {
   const cargarDespuesDelPrimerRender = () => cargarCatalogoRemoto().then(resolve);
   if ("requestIdleCallback" in window) {

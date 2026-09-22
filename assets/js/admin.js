@@ -37,6 +37,7 @@
   const pageStatus = document.getElementById("admin-page-status");
   const INACTIVITY_TIMEOUT_MS = 20 * 60 * 1000;
   const SALES_PAGE_SIZE = 10;
+  const exportExcelButton = document.getElementById("btn-export-excel");
   let adminToken = sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY) || "";
   let inactivityTimer = null;
   let salesRows = [];
@@ -292,17 +293,18 @@
   }
 
   function renderRows(rows) {
-    if (!rows.length) {
-      tableBody.innerHTML = '<tr><td colspan="7" class="table-empty">No hay folios registrados todavía.</td></tr>';
-      salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">◎</span><strong>No hay folios todavía</strong><p>Los nuevos apartados aparecerán aquí.</p></div>';
-      return;
-    }
+  if (!rows.length) {
+    tableBody.innerHTML = '<tr><td colspan="8" class="table-empty">No hay folios registrados todavía.</td></tr>';
+    salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">◎</span><strong>No hay folios todavía</strong><p>Los nuevos apartados aparecerán aquí.</p></div>';
+    return;
+  }
 
     tableBody.innerHTML = rows.map((row) => `
       <tr>
         <td>${row.folio}</td>
         <td>${row.cliente || "—"}</td>
         <td>${row.diseno || "—"}</td>
+        <td>${row.codigo || "—"}</td>
         <td>${formatMoney(row.precio)}</td>
         <td><span class="status-badge ${row.estado === "vendido" ? "is-sold" : "is-active"}">${row.estado === "vendido" ? "Vendido" : "Activo"}</span></td>
         <td>${row.fecha || "—"}</td>
@@ -318,7 +320,7 @@
     salesCards.innerHTML = rows.map((row) => `
       <article class="sale-card">
         <div class="sale-card-heading"><strong>${row.folio}</strong><span class="status-badge ${row.estado === "vendido" ? "is-sold" : "is-active"}">${row.estado === "vendido" ? "Vendido" : "Activo"}</span></div>
-        <dl><div><dt>Cliente</dt><dd>${row.cliente || "—"}</dd></div><div><dt>Diseño</dt><dd>${row.diseno || "—"}</dd></div><div><dt>Precio</dt><dd>${formatMoney(row.precio)}</dd></div><div><dt>Fecha</dt><dd>${row.fecha || "—"}</dd></div></dl>
+        <dl><div><dt>Cliente</dt><dd>${row.cliente || "—"}</dd></div><div><dt>Diseño</dt><dd>${row.diseno || "—"}</dd></div><div><dt>Código</dt><dd>${row.codigo || "—"}</dd></div><div><dt>Precio</dt><dd>${formatMoney(row.precio)}</dd></div><div><dt>Fecha</dt><dd>${row.fecha || "—"}</dd></div></dl>
         <select class="status-select" data-folio="${row.folio}" aria-label="Cambiar estado de ${row.folio}"><option value="activo" ${row.estado === "activo" ? "selected" : ""}>Activo</option><option value="vendido" ${row.estado === "vendido" ? "selected" : ""}>Vendido</option></select>
       </article>
     `).join("");
@@ -348,6 +350,44 @@
     pageStatus.textContent = `Página ${salesPage} de ${totalPages}`;
     previousPageButton.disabled = salesPage === 1;
     nextPageButton.disabled = salesPage === totalPages;
+  }
+
+  function exportSalesToExcel() {
+  if (typeof XLSX === "undefined") {
+      showToast("No disponible", "No se pudo cargar la librería de Excel. Revisa tu conexión.", true);
+      return;
+    }
+
+    const search = clientSearchInput.value.trim().toLowerCase();
+    const filteredRows = salesRows.filter((row) => {
+      const searchableText = [row.cliente, row.folio, row.diseno, row.codigo, row.estado].join(" ").toLowerCase();
+      return searchableText.includes(search);
+    });
+
+    if (!filteredRows.length) {
+      showToast("Sin datos", "No hay folios para exportar.", true);
+      return;
+    }
+
+    const data = filteredRows.map((row) => ({
+      Folio: row.folio || "",
+      Cliente: row.cliente || "",
+      Diseño: row.diseno || "",
+      Código: row.codigo || "",
+      Precio: Number(row.precio || 0),
+      Estado: row.estado === "vendido" ? "Vendido" : "Activo",
+      Fecha: row.fecha || "",
+      "Es referencia": row.isReferral || "",
+      "Código referencia": row.referralCode || "",
+      "Vendedor referencia": row.referralSeller || ""
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Ventas");
+
+    const fecha = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(workbook, `maternity-reborn-ventas-${fecha}.xlsx`);
   }
 
   async function updateSaleStatus(select) {
@@ -411,7 +451,7 @@
       return true;
     } catch (error) {
       console.error("No se pudo cargar la data del panel:", error);
-      tableBody.innerHTML = '<tr><td colspan="7" class="table-empty">No se pudo cargar la información. Revisa la conexión con Google Sheets.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="8" class="table-empty">No se pudo cargar la información. Revisa la conexión con Google Sheets.</td></tr>';
       salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">!</span><strong>No se pudo cargar la información</strong><p>Revisa la conexión con Google Sheets.</p></div>';
       return false;
     }
@@ -427,6 +467,7 @@
       renderFilteredRows();
     }
   });
+  exportExcelButton.addEventListener("click", exportSalesToExcel);
   nextPageButton.addEventListener("click", () => {
     salesPage += 1;
     renderFilteredRows();

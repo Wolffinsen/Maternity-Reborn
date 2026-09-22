@@ -109,6 +109,7 @@ function abrirFormularioReserva(diseno, categoriaLabel) {
         body: JSON.stringify({
           action: "createReservation",
           diseno: diseno?.nombre || "Bebé Reborn",
+          codigo: diseno?.codigo || "",
           precio: Number(diseno?.precio || 0),
           nombreCliente: formData.get("nombre"),
           telefonoCliente: formData.get("telefono"),
