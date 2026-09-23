@@ -856,9 +856,8 @@
       if (!codigo) throw new Error("Agrega un código para el producto.");
 
       const codigoDuplicado = CATALOGO.some((item) =>
-        item.codigo &&
-        item.codigo.trim().toLowerCase() === codigo.toLowerCase() &&
-        String(item.id) !== String(editingProduct?.id ?? "")
+      String(item.codigo || "").trim().toLowerCase() === codigo.toLowerCase() &&
+      String(item.id) !== String(editingProduct?.id ?? "")
       );
       if (codigoDuplicado) throw new Error(`Ya existe un producto con el código "${codigo}". Usa un código distinto.`);
 
