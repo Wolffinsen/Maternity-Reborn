@@ -302,15 +302,35 @@
     stats.ultimo.textContent = ultimo;
   }
 
+  function renderSaleThumb(row, large = false) {
+    const src = String(row.imagen || "").trim();
+    const size = large ? " sale-thumb--large" : "";
+    if (!src) return `<span class="sale-thumb-empty${size}" aria-hidden="true">Sin foto</span>`;
+    const alt = `Producto ${row.diseno || row.folio || ""}`;
+    return `<a class="sale-thumb-link" href="${escapeHtml(src)}" target="_blank" rel="noopener noreferrer"><img class="sale-thumb${size}" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy" decoding="async"></a>`;
+  }
+
+  function bindThumbFallbacks() {
+    document.querySelectorAll(".sale-thumb").forEach((img) => {
+      img.addEventListener("error", () => {
+        const placeholder = document.createElement("span");
+        placeholder.className = "sale-thumb-empty" + (img.classList.contains("sale-thumb--large") ? " sale-thumb--large" : "");
+        placeholder.textContent = "Sin foto";
+        (img.closest(".sale-thumb-link") || img).replaceWith(placeholder);
+      }, { once: true });
+    });
+  }
+
   function renderRows(rows) {
   if (!rows.length) {
-    tableBody.innerHTML = '<tr><td colspan="8" class="table-empty">No hay folios registrados todavía.</td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="9" class="table-empty">No hay folios registrados todavía.</td></tr>';
     salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">◎</span><strong>No hay folios todavía</strong><p>Los nuevos apartados aparecerán aquí.</p></div>';
     return;
   }
 
     tableBody.innerHTML = rows.map((row) => `
       <tr>
+        <td>${renderSaleThumb(row)}</td>
         <td>${row.folio}</td>
         <td>${row.cliente || "—"}</td>
         <td>${row.diseno || "—"}</td>
@@ -330,11 +350,13 @@
     salesCards.innerHTML = rows.map((row) => `
       <article class="sale-card">
         <div class="sale-card-heading"><strong>${row.folio}</strong><span class="status-badge ${row.estado === "vendido" ? "is-sold" : "is-active"}">${row.estado === "vendido" ? "Vendido" : "Activo"}</span></div>
+        <div class="sale-card-photo">${renderSaleThumb(row, true)}</div>
         <dl><div><dt>Cliente</dt><dd>${row.cliente || "—"}</dd></div><div><dt>Diseño</dt><dd>${row.diseno || "—"}</dd></div><div><dt>Código</dt><dd>${row.codigo || "—"}</dd></div><div><dt>Precio</dt><dd>${formatMoney(row.precio)}</dd></div><div><dt>Fecha</dt><dd>${row.fecha || "—"}</dd></div></dl>
         <select class="status-select" data-folio="${row.folio}" aria-label="Cambiar estado de ${row.folio}"><option value="activo" ${row.estado === "activo" ? "selected" : ""}>Activo</option><option value="vendido" ${row.estado === "vendido" ? "selected" : ""}>Vendido</option></select>
       </article>
     `).join("");
 
+    bindThumbFallbacks();
     tableBody.querySelectorAll(".status-select").forEach((select) => {
       select.addEventListener("change", () => updateSaleStatus(select));
     });
@@ -461,7 +483,7 @@
       return true;
     } catch (error) {
       console.error("No se pudo cargar la data del panel:", error);
-      tableBody.innerHTML = '<tr><td colspan="8" class="table-empty">No se pudo cargar la información. Revisa la conexión con Google Sheets.</td></tr>';
+      tableBody.innerHTML = '<tr><td colspan="9" class="table-empty">No se pudo cargar la información. Revisa la conexión con Google Sheets.</td></tr>';
       salesCards.innerHTML = '<div class="admin-empty-state"><span class="admin-empty-icon" aria-hidden="true">!</span><strong>No se pudo cargar la información</strong><p>Revisa la conexión con Google Sheets.</p></div>';
       return false;
     }

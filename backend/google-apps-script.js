@@ -7,12 +7,19 @@
  * 3. En Configuración del proyecto > Propiedades del script crea:
  *    ADMIN_PASSWORD = una contraseña larga y privada.
  *    La primera autenticación la migra automáticamente a hash + sal.
+ *    SITE_URL = la dirección pública de tu página, sin diagonal final
+ *    (ej. https://www.tudominio.com). Solo se usa para que Google Sheets
+ *    pueda mostrar las fotos cuando en el catálogo están guardadas como
+ *    rutas relativas (ej. assets/img/producto.jpg).
  * 4. Implementa como aplicación web: ejecutar como tú y acceso para cualquiera.
  * 5. Conserva la misma URL /exec en assets/js/datos.js.
  *
  * La hoja debe llamarse "Ventas". Si no existe, se usa la primera hoja.
  * Encabezados recomendados:
- * Fecha | Folio | Cliente | Telefono | Diseno | Precio | Estado | Es referencia | Codigo referencia | Vendedor referencia
+ * Fecha | Folio | Cliente | Telefono | Diseno | Codigo | Precio | Estado | Es referencia | Codigo referencia | Vendedor referencia | Imagen
+ *
+ * Para llenar las fotos de las ventas que ya existían, ejecuta una sola vez
+ * la función rellenarFotosVentas desde el editor de Apps Script.
  */
 
 const SALES_SHEET_NAME = "Ventas";
@@ -24,6 +31,8 @@ const ADMIN_SESSIONS_PROPERTY = "ADMIN_SESSIONS";
 const ADMIN_LOGIN_STATE_PROPERTY = "ADMIN_LOGIN_STATE";
 const REFERRAL_REGISTRY_PROPERTY = "REFERRAL_REGISTRY";
 const CATEGORY_ORDER_PROPERTY = "CATEGORY_ORDER";
+const SALES_IMAGE_ROW_HEIGHT = 90;
+const SALES_IMAGE_COLUMN_WIDTH = 90;
 
 function doPost(event) {
   try {
@@ -37,7 +46,7 @@ function doPost(event) {
       return changeAdminPassword(payload);
     }
 
-        if (payload.action === "readCategoryOrder") {
+    if (payload.action === "readCategoryOrder") {
       return jsonResponse({ ok: true, action: "readCategoryOrder", data: readCategoryOrder() });
     }
 
@@ -305,56 +314,190 @@ function createReservation(payload) {
     return jsonResponse({ ok: false, error: "Los datos de la reserva están incompletos." });
   }
 
-  const sheet = getSalesSheet();
-  const headers = ensureHeaders(sheet);
-  const folio = createFolio(sheet, headers);
-  const referralCode = String(payload.referralCode || "").trim().toUpperCase();
-  const referralRegistry = readReferralCodes();
-  const referralSeller = referralCode && referralRegistry[referralCode]
-    ? String(referralRegistry[referralCode].name || "").trim()
-    : "";
-  const now = new Date();
-  const row = headers.map(function (header) {
-    switch (normalizeHeader(header)) {
-      case "fecha": return now;
-      case "folio": return folio;
-      case "cliente": return nombreCliente;
-      case "telefono": return telefonoCliente;
-      case "diseno": return diseno;
-      case "codigo": return codigo;
-      case "precio": return precio;
-      case "estado": return "activo";
-      case "esreferencia": return referralSeller ? "Sí" : "No";
-      case "codigoreferencia": return referralSeller ? referralCode : "";
-      case "vendedorreferencia": return referralSeller;
-      default: return "";
-    }
-  });
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
 
-  sheet.appendRow(row);
-  return jsonResponse({
-    ok: true,
-    folio: folio,
-    referralCode: referralSeller ? referralCode : "",
-    referralSeller: referralSeller
-  });
+  try {
+    const sheet = getSalesSheet();
+    const headers = ensureHeaders(sheet);
+    const folio = createFolio(sheet, headers);
+    const referralCode = String(payload.referralCode || "").trim().toUpperCase();
+    const referralRegistry = readReferralCodes();
+    const referralSeller = referralCode && referralRegistry[referralCode]
+      ? String(referralRegistry[referralCode].name || "").trim()
+      : "";
+    const imagenUrl = toAbsoluteImageUrl(resolveProductImage(payload.imagen, codigo, diseno));
+    const now = new Date();
+    const row = headers.map(function (header) {
+      switch (normalizeHeader(header)) {
+        case "fecha": return now;
+        case "folio": return folio;
+        case "cliente": return nombreCliente;
+        case "telefono": return telefonoCliente;
+        case "diseno": return diseno;
+        case "codigo": return codigo;
+        case "precio": return precio;
+        case "estado": return "activo";
+        case "esreferencia": return referralSeller ? "Sí" : "No";
+        case "codigoreferencia": return referralSeller ? referralCode : "";
+        case "vendedorreferencia": return referralSeller;
+        default: return "";
+      }
+    });
+
+    sheet.appendRow(row);
+    if (imagenUrl) {
+      writeSaleImage(sheet, headers, sheet.getLastRow(), imagenUrl);
+    }
+
+    return jsonResponse({
+      ok: true,
+      folio: folio,
+      referralCode: referralSeller ? referralCode : "",
+      referralSeller: referralSeller
+    });
+  } finally {
+    lock.releaseLock();
+  }
 }
 
+/* ---------- Imágenes de producto ---------- */
+
+function getSiteUrl() {
+  return String(PropertiesService.getScriptProperties().getProperty("SITE_URL") || "")
+    .trim()
+    .replace(/\/+$/, "");
+}
+
+// Google Sheets solo puede mostrar imágenes con una URL pública completa.
+// Devuelve "" si la imagen no se puede usar en la hoja (base64 o ruta relativa sin SITE_URL).
+function toAbsoluteImageUrl(url) {
+  const value = String(url || "").trim();
+  if (!value || /^data:/i.test(value)) return "";
+  if (/^https?:\/\//i.test(value)) return value.replace(/ /g, "%20");
+
+  const siteUrl = getSiteUrl();
+  if (!siteUrl) return "";
+  return siteUrl + "/" + value.replace(/^(\.\/|\/)+/, "").replace(/ /g, "%20");
+}
+
+function buildImageFormula(url) {
+  return '=IMAGE("' + String(url).replace(/"/g, "%22") + '")';
+}
+
+function extractImageUrl(formula) {
+  const match = String(formula || "").match(/^=IMAGE\(\s*"([^"]+)"/i);
+  return match ? match[1] : "";
+}
+
+function findCatalogImage(catalogRows, codigo, diseno) {
+  const code = normalizeHeader(codigo);
+  const name = normalizeHeader(diseno);
+  let product = code
+    ? catalogRows.find(function (item) { return normalizeHeader(item.codigo) === code; })
+    : null;
+  if (!product && name) {
+    product = catalogRows.find(function (item) { return normalizeHeader(item.nombre) === name; });
+  }
+  if (!product) return "";
+  return String(product.imagen || (product.fotos && product.fotos[0]) || "").trim();
+}
+
+function readCatalogRowsSafe() {
+  try {
+    return readCatalogRows();
+  } catch (error) {
+    return [];
+  }
+}
+
+// Usa la imagen que mande la página; si no viene, la busca en el catálogo por código o nombre.
+function resolveProductImage(payloadImage, codigo, diseno) {
+  const sent = String(payloadImage || "").trim();
+  if (sent) return sent;
+  return findCatalogImage(readCatalogRowsSafe(), codigo, diseno);
+}
+
+function writeSaleImage(sheet, headers, rowNumber, imageUrl) {
+  const imagenIndex = headers.findIndex(function (header) {
+    return normalizeHeader(header) === "imagen";
+  });
+  if (imagenIndex < 0) return;
+
+  sheet.getRange(rowNumber, imagenIndex + 1).setFormula(buildImageFormula(imageUrl));
+  sheet.setRowHeight(rowNumber, SALES_IMAGE_ROW_HEIGHT);
+  sheet.setColumnWidth(imagenIndex + 1, SALES_IMAGE_COLUMN_WIDTH);
+}
+
+// Ejecuta esta función UNA VEZ desde el editor de Apps Script para
+// agregar la foto a las ventas que ya estaban registradas.
+function rellenarFotosVentas() {
+  const sheet = getSalesSheet();
+  const headers = ensureHeaders(sheet);
+  if (sheet.getLastRow() < 2) return 0;
+
+  const imagenIndex = headers.findIndex(function (header) {
+    return normalizeHeader(header) === "imagen";
+  });
+  const range = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length);
+  const values = range.getValues();
+  const formulas = range.getFormulas();
+  const catalogRows = readCatalogRowsSafe();
+  let updated = 0;
+
+  values.forEach(function (row, index) {
+    if (formulas[index][imagenIndex] || row[imagenIndex]) return;
+    const imageUrl = toAbsoluteImageUrl(findCatalogImage(
+      catalogRows,
+      getCell(row, headers, ["codigo"]),
+      getCell(row, headers, ["diseno", "producto"])
+    ));
+    if (!imageUrl) return;
+    writeSaleImage(sheet, headers, index + 2, imageUrl);
+    updated += 1;
+  });
+
+  Logger.log("Fotos agregadas: " + updated);
+  return updated;
+}
+
+/* ---------- Ventas ---------- */
 
 function readSalesRows() {
   const sheet = getSalesSheet();
-  const values = sheet.getDataRange().getValues();
+  const range = sheet.getDataRange();
+  const values = range.getValues();
   if (values.length < 2) return [];
 
+  const formulas = range.getFormulas();
   const headers = values[0];
+  const imagenIndex = headers.findIndex(function (header) {
+    return normalizeHeader(header) === "imagen";
+  });
+  let catalogRows = null;
+
   return values.slice(1)
     .map(function (row, index) {
+      const codigo = getCell(row, headers, ["codigo"]);
+      const diseno = getCell(row, headers, ["diseno", "diseño", "producto"]);
+
+      // 1) foto guardada en la hoja, 2) si no hay, la del catálogo.
+      let imagen = "";
+      if (imagenIndex >= 0) {
+        imagen = extractImageUrl(formulas[index + 1][imagenIndex]) || String(row[imagenIndex] || "").trim();
+      }
+      if (!imagen) {
+        if (catalogRows === null) catalogRows = readCatalogRowsSafe();
+        imagen = findCatalogImage(catalogRows, codigo, diseno);
+      }
+
       return {
         rowNumber: index + 2,
         folio: getCell(row, headers, ["folio"]),
         cliente: getCell(row, headers, ["cliente", "nombrecliente", "nombredelcliente", "nombre", "name"]),
-        diseno: getCell(row, headers, ["diseno", "diseño", "producto"]),
-        codigo: getCell(row, headers, ["codigo"]),
+        diseno: diseno,
+        codigo: codigo,
+        imagen: imagen,
         precio: Number(getCell(row, headers, ["precio", "total"]) || 0),
         estado: normalizeStatus(getCell(row, headers, ["estado", "estatus", "status"])),
         fecha: formatDate(getCell(row, headers, ["fecha", "timestamp", "fechadeapartado"])),
@@ -364,7 +507,7 @@ function readSalesRows() {
       };
     })
     .filter(function (row) {
-      return row.folio || row.cliente || row.telefono || row.diseno || row.precio || row.fecha;
+      return row.folio || row.cliente || row.diseno || row.precio || row.fecha;
     })
     .sort(function (first, second) {
       const dateOrder = String(second.fecha).localeCompare(String(first.fecha));
@@ -517,13 +660,13 @@ function ensureCatalogHeaders(sheet) {
 
 function ensureHeaders(sheet) {
   if (sheet.getLastRow() === 0) {
-    const headers = ["Fecha", "Folio", "Cliente", "Telefono", "Diseno", "Codigo", "Precio", "Estado", "Es referencia", "Codigo referencia", "Vendedor referencia"];
+    const headers = ["Fecha", "Folio", "Cliente", "Telefono", "Diseno", "Codigo", "Precio", "Estado", "Es referencia", "Codigo referencia", "Vendedor referencia", "Imagen"];
     sheet.appendRow(headers);
     return headers;
   }
 
   const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  const requiredHeaders = ["Codigo", "Es referencia", "Codigo referencia", "Vendedor referencia"];
+  const requiredHeaders = ["Codigo", "Es referencia", "Codigo referencia", "Vendedor referencia", "Imagen"];
   const normalizedHeaders = headers.map(normalizeHeader);
   const missingHeaders = requiredHeaders.filter(function (header) {
     return normalizedHeaders.indexOf(normalizeHeader(header)) < 0;

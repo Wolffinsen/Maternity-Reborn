@@ -1356,3 +1356,50 @@ tbody td { padding: 14px 12px; border-top: 1px solid var(--color-line); color: v
   .catalogo-admin-actions { flex-direction: column; }
   .catalogo-admin-actions .btn-primary, .catalogo-admin-actions .btn-secondary { width: 100%; }
 }
+
+.sale-thumb-link {
+  display: inline-block;
+  line-height: 0;
+}
+
+.sale-thumb,
+.sale-thumb-empty {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: #f4efe9;
+}
+
+.sale-thumb {
+  display: block;
+  object-fit: cover;
+}
+
+.sale-thumb-empty {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #9a8f85;
+  font-size: 11px;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.sale-thumb--large {
+  width: 100%;
+  height: 180px;
+  border-radius: 12px;
+}
+
+.sale-card-photo {
+  margin: 12px 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .sale-thumb,
+  .sale-thumb-empty {
+    border-color: rgba(255, 255, 255, 0.12);
+    background: #2a2622;
+  }
+}
