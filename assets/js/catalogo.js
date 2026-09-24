@@ -28,6 +28,7 @@
   const emptyState = document.getElementById("catalogo-empty");
 
   let categoriaActiva = "todas";
+  let CATALOGO_CARGADO = false;
 
   /* ---------------------------------------------------------
      Utilidades
@@ -244,6 +245,10 @@
 
     if (!grupos.length) {
       grid.innerHTML = "";
+      const hayBusquedaOFiltro = (searchInput && searchInput.value.trim()) || categoriaActiva !== "todas";
+      emptyState.textContent = (!CATALOGO_CARGADO && !hayBusquedaOFiltro)
+        ? "Cargando catálogo..."
+        : "No encontramos bebés con ese nombre, prueba con otra búsqueda.";
       emptyState.hidden = false;
       return;
     }
@@ -317,8 +322,11 @@
   const anio = document.getElementById("anio-actual");
   if (anio) anio.textContent = new Date().getFullYear();
 
-  mostrarToastAnticipo();
+    mostrarToastAnticipo();
   renderCatalogo();
-  CATALOGO_READY.then(() => renderCatalogo());
+  CATALOGO_READY.then(() => {
+    CATALOGO_CARGADO = true;
+    renderCatalogo();
+  });
   CATEGORY_ORDER_READY.then(() => renderCatalogo());
 })();

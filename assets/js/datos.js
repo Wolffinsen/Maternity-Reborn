@@ -135,14 +135,7 @@ cargarCatalogoGuardado();
 const NUMERO_WHATSAPP = "5214423807369";
 const COSTO_APARTADO = 200;
 const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzjH7ZL2V85L420BwZJY7DeTtKiwGmIDjQ6tQXQvtGoiOfJiG5Tx1g0fU0UB8TNSxl4/exec";
-const CATALOGO_READY = new Promise((resolve) => {
-  const cargarDespuesDelPrimerRender = () => cargarCatalogoRemoto().then(resolve);
-  if ("requestIdleCallback" in window) {
-    window.requestIdleCallback(cargarDespuesDelPrimerRender, { timeout: 2000 });
-  } else {
-    window.setTimeout(cargarDespuesDelPrimerRender, 0);
-  }
-});
+const CATALOGO_READY = cargarCatalogoRemoto();
 
 let CATEGORY_ORDER_REMOTE = [];
 const CATEGORY_ORDER_STORAGE_KEY = "maternityRebornCategoryOrder";
