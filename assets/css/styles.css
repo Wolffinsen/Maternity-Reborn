@@ -1156,7 +1156,7 @@ img { max-width: 100%; display: block; }
 .admin-panel { padding: 22px 18px 18px; }
 .admin-search-field { max-width: 430px; margin-bottom: 18px; }
 .admin-search-field .field-input { margin-top: 8px; }
-.panel-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
+.panel-heading { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; }
 .panel-heading h3 { margin: 0; color: var(--color-wine); font: 28px var(--font-display); }
 .table-wrap { overflow-x: auto; }
 table { width: 100%; min-width: 640px; border-collapse: collapse; }
@@ -1329,9 +1329,11 @@ tbody td { padding: 14px 12px; border-top: 1px solid var(--color-line); color: v
   .referral-toolbar .field-input { width: 100%; }
   .panel-heading { align-items: flex-start; }
   .admin-new-referral { width: auto; padding: 10px 12px; font-size: 11px; }
+  .admin-new-referral { width: 100%; }
   .table-wrap { display: none; }
   .admin-sales-cards { display: grid; gap: 12px; }
   .admin-header { gap: 12px; }
+  
 }
 
 @media (max-width: 640px) {
