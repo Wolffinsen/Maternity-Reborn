@@ -23,6 +23,7 @@ const ADMIN_MAX_FAILED_ATTEMPTS = 5;
 const ADMIN_SESSIONS_PROPERTY = "ADMIN_SESSIONS";
 const ADMIN_LOGIN_STATE_PROPERTY = "ADMIN_LOGIN_STATE";
 const REFERRAL_REGISTRY_PROPERTY = "REFERRAL_REGISTRY";
+const CATEGORY_ORDER_PROPERTY = "CATEGORY_ORDER";
 
 function doPost(event) {
   try {
@@ -34,6 +35,14 @@ function doPost(event) {
 
     if (payload.action === "changeAdminPassword") {
       return changeAdminPassword(payload);
+    }
+
+        if (payload.action === "readCategoryOrder") {
+      return jsonResponse({ ok: true, action: "readCategoryOrder", data: readCategoryOrder() });
+    }
+
+    if (payload.action === "saveCategoryOrder") {
+      return saveCategoryOrder(payload);
     }
 
     if (payload.action === "readSales") {
@@ -133,6 +142,27 @@ function saveReferralCodes(payload) {
 
   PropertiesService.getScriptProperties().setProperty(REFERRAL_REGISTRY_PROPERTY, JSON.stringify(registry));
   return jsonResponse({ ok: true, action: "saveReferralCodes" });
+}
+
+function readCategoryOrder() {
+  const raw = PropertiesService.getScriptProperties().getProperty(CATEGORY_ORDER_PROPERTY);
+  try {
+    const order = JSON.parse(raw || "[]");
+    return Array.isArray(order) ? order : [];
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveCategoryOrder(payload) {
+  if (!isAdminSessionValid(payload.sessionToken)) {
+    return jsonResponse({ ok: false, error: "No autorizado" });
+  }
+  if (!Array.isArray(payload.order)) {
+    return jsonResponse({ ok: false, error: "El orden de categorías no es válido." });
+  }
+  PropertiesService.getScriptProperties().setProperty(CATEGORY_ORDER_PROPERTY, JSON.stringify(payload.order));
+  return jsonResponse({ ok: true, action: "saveCategoryOrder" });
 }
 
 function authenticateAdmin(password) {

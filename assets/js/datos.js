@@ -1,4 +1,9 @@
-﻿function crearDiseno({
+﻿function cloudinaryUrl(url, width) {
+  if (!url || !url.includes("res.cloudinary.com") || !url.includes("/upload/")) return url;
+  if (url.includes("/upload/f_auto")) return url;
+  return url.replace("/upload/", `/upload/f_auto,q_auto,w_${width}/`);
+}
+function crearDiseno({
   id,
   nombre,
   categoria,
@@ -129,12 +134,74 @@ cargarCatalogoGuardado();
 // TODO: Configure the business WhatsApp number here before publishing.
 const NUMERO_WHATSAPP = "5214423807369";
 const COSTO_APARTADO = 200;
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbxcaIemJBxbnjoik3fm80WYtOc8kbvHiLKG5Odc83JDpElAQ1_NpAOPox2_Bg_l6AY5/exec";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzjH7ZL2V85L420BwZJY7DeTtKiwGmIDjQ6tQXQvtGoiOfJiG5Tx1g0fU0UB8TNSxl4/exec";
 const CATALOGO_READY = new Promise((resolve) => {
   const cargarDespuesDelPrimerRender = () => cargarCatalogoRemoto().then(resolve);
   if ("requestIdleCallback" in window) {
     window.requestIdleCallback(cargarDespuesDelPrimerRender, { timeout: 2000 });
   } else {
     window.setTimeout(cargarDespuesDelPrimerRender, 0);
+  }
+});
+
+let CATEGORY_ORDER_REMOTE = [];
+const CATEGORY_ORDER_STORAGE_KEY = "maternityRebornCategoryOrder";
+
+function cargarOrdenCategoriasGuardado() {
+  try {
+    const guardado = JSON.parse(localStorage.getItem(CATEGORY_ORDER_STORAGE_KEY) || "null");
+    if (Array.isArray(guardado)) CATEGORY_ORDER_REMOTE = guardado;
+  } catch (error) {
+    console.warn("No se pudo cargar el orden de categorías guardado:", error);
+  }
+}
+
+async function cargarOrdenCategoriasRemoto() {
+  if (!URL_APPS_SCRIPT) return { ok: false };
+  try {
+    const response = await fetch(URL_APPS_SCRIPT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "readCategoryOrder" })
+    });
+    const result = await response.json();
+    if (!result.ok || result.action !== "readCategoryOrder" || !Array.isArray(result.data)) return { ok: false };
+    CATEGORY_ORDER_REMOTE = result.data;
+    try { localStorage.setItem(CATEGORY_ORDER_STORAGE_KEY, JSON.stringify(CATEGORY_ORDER_REMOTE)); } catch (error) {}
+    return { ok: true };
+  } catch (error) {
+    console.warn("No se pudo cargar el orden de categorías:", error);
+    return { ok: false, error };
+  }
+}
+
+async function guardarOrdenCategoriasRemoto(order, sessionToken) {
+  if (!URL_APPS_SCRIPT) return { ok: false, error: "No hay conexión configurada con el servidor." };
+  try {
+    const response = await fetch(URL_APPS_SCRIPT, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify({ action: "saveCategoryOrder", sessionToken, order })
+    });
+    const result = await response.json();
+    if (!result.ok || result.action !== "saveCategoryOrder") {
+      return { ok: false, error: result.error || "No se pudo guardar el orden de categorías." };
+    }
+    CATEGORY_ORDER_REMOTE = order;
+    try { localStorage.setItem(CATEGORY_ORDER_STORAGE_KEY, JSON.stringify(order)); } catch (error) {}
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error.message };
+  }
+}
+
+cargarOrdenCategoriasGuardado();
+
+const CATEGORY_ORDER_READY = new Promise((resolve) => {
+  const cargar = () => cargarOrdenCategoriasRemoto().then(resolve);
+  if ("requestIdleCallback" in window) {
+    window.requestIdleCallback(cargar, { timeout: 2000 });
+  } else {
+    window.setTimeout(cargar, 0);
   }
 });

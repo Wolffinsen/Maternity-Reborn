@@ -20,7 +20,7 @@
   };
 
   // Orden en que aparecen las filas (por talla). Las categorías nuevas van al final.
-  const CATEGORY_ORDER = Object.keys(ES_LABELS);
+  const CATEGORY_ORDER_DEFAULT = Object.keys(ES_LABELS);
 
   const grid = document.getElementById("catalogo-grid");
   const searchInput = document.getElementById("catalogo-search");
@@ -45,8 +45,9 @@
   }
 
   function ordenCategoria(key) {
-    const index = CATEGORY_ORDER.indexOf(key);
-    return index === -1 ? CATEGORY_ORDER.length : index;
+    const orden = (Array.isArray(CATEGORY_ORDER_REMOTE) && CATEGORY_ORDER_REMOTE.length) ? CATEGORY_ORDER_REMOTE : CATEGORY_ORDER_DEFAULT;
+    const index = orden.indexOf(key);
+    return index === -1 ? orden.length : index;
   }
 
   function getCategoriasDisponibles() {
@@ -162,7 +163,7 @@
     return `
       <article class="tarjeta">
         <a class="tarjeta-imagen-wrap ${paletteClass}" href="${href}" aria-label="Ver a ${esc(diseno.nombre)}">
-          <img src="${esc(diseno.imagen)}" alt="Bebé reborn ${esc(diseno.nombre)}" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
+          <img src="${esc(cloudinaryUrl(diseno.imagen, 500))}" alt="Bebé reborn ${esc(diseno.nombre)}" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.display='none'; this.parentElement.classList.add('is-placeholder');">
           <div class="tarjeta-badges">${badges}</div>
         </a>
         <div class="tarjeta-info">
@@ -319,4 +320,5 @@
   mostrarToastAnticipo();
   renderCatalogo();
   CATALOGO_READY.then(() => renderCatalogo());
+  CATEGORY_ORDER_READY.then(() => renderCatalogo());
 })();

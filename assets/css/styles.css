@@ -1254,7 +1254,7 @@ tbody td { padding: 14px 12px; border-top: 1px solid var(--color-line); color: v
 .catalogo-admin-card:hover { box-shadow: 0 10px 22px var(--color-shadow); transform: translateY(-2px); }
 .catalogo-admin-card-image { position: relative; aspect-ratio: 4 / 5; background: var(--color-image-bg); }
 .catalogo-admin-card-image img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.catalogo-admin-bulk-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--color-line); border-radius: 12px; background: rgba(138,107,145,.08); }
+.catalogo-admin-bulk-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin: 0 0 14px; padding: 10px 14px; border: 1px solid var(--color-line); border-radius: 12px; background: rgba(138,107,145,.08); }
 .catalogo-admin-bulk-bar span { color: var(--color-wine); font-size: 13px; font-weight: 700; }
 .catalogo-admin-bulk-bar .catalogo-admin-delete { width: auto; padding: 8px 14px; }
 .catalogo-admin-bulk-bar .catalogo-admin-delete:disabled { opacity: .45; cursor: not-allowed; }
@@ -1347,6 +1347,9 @@ tbody td { padding: 14px 12px; border-top: 1px solid var(--color-line); color: v
   .catalogo-admin-card-actions { flex-direction: column; }
   .catalogo-admin-tools { align-items: stretch; flex-direction: column; }
   .catalogo-admin-tools .btn-primary, .catalogo-admin-tools .btn-secondary { width: 100%; }
+  .catalogo-admin-bulk-bar { flex-direction: column; align-items: stretch; gap: 10px; }
+  .catalogo-admin-bulk-bar #catalogo-admin-bulk-count { text-align: center; }
+  .catalogo-admin-bulk-bar .catalogo-admin-delete { width: 100%; }
   .catalogo-admin-fields { grid-template-columns: 1fr; }
   .catalogo-admin-actions { flex-direction: column; }
   .catalogo-admin-actions .btn-primary, .catalogo-admin-actions .btn-secondary { width: 100%; }

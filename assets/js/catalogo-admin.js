@@ -85,13 +85,15 @@
 
   const editor = document.createElement("section");
   editor.className = "catalogo-admin-tools";
-  editor.innerHTML = `
+    editor.innerHTML = `
     <div>
       <p class="eyebrow"><i></i>Modo administrador</p>
       <p>Los cambios se guardan en Google Sheets y se reflejan para todos tus clientes.</p>
     </div>
     <button type="button" class="btn-primary" id="catalogo-admin-add">Agregar producto</button>
     <button type="button" class="btn-secondary" id="catalogo-admin-manage">Editar productos</button>
+    <button type="button" class="btn-secondary" id="catalogo-admin-order">Ordenar categorías</button>
+    <a href="admin.html" class="btn-secondary" id="catalogo-admin-back" style="text-align:center;text-decoration:none;">Ir al panel admin</a>
   `;
   catalogoHeading.insertAdjacentElement("afterend", editor);
 
@@ -389,7 +391,7 @@
 
     imageGallery.innerHTML = galleryImages.map((image, index) => `
       <article class="catalogo-admin-gallery-item${index === 0 ? " is-main" : ""}" draggable="true" data-image-index="${index}">
-        <img src="${image}" alt="Imagen ${index + 1}" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0.35'">
+        <img src="${cloudinaryUrl(image, 200)}" alt="Imagen ${index + 1}" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0.35'">
         ${index === 0 ? '<span class="catalogo-admin-gallery-badge">Principal</span>' : '<button type="button" class="catalogo-admin-gallery-main" data-gallery-action="main">Hacer principal</button>'}
         <button type="button" class="catalogo-admin-gallery-remove" data-gallery-action="remove" aria-label="Eliminar imagen ${index + 1}">&times;</button>
         <span class="catalogo-admin-gallery-order">${index + 1}</span>
@@ -617,7 +619,7 @@
             <input type="checkbox" class="catalogo-admin-select-input" data-id="${product.id}" ${selectedIds.has(String(product.id)) ? "checked" : ""}>
           </label>
           <div class="catalogo-admin-card-image">
-            <img src="${product.imagen || ""}" alt="" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0'">
+            <img src="${cloudinaryUrl(product.imagen || "", 250)}" alt="" width="1200" height="1600" loading="lazy" decoding="async" onerror="this.style.opacity='0'">
             ${product.esNuevo ? '<span class="catalogo-admin-tag is-new">Nuevo</span>' : ""}
             ${product.esOferta ? '<span class="catalogo-admin-tag is-promotion">Promoción</span>' : ""}
             <span class="catalogo-admin-tag ${disponible ? "is-available" : "is-unavailable"}">${disponible ? "Disponible" : "Apartado"}</span>
@@ -908,4 +910,96 @@
       ocultarProgresoGuardado();
     }
   });
+
+    // ===== Orden de categorías del catálogo =====
+  const orderModal = document.createElement("div");
+  orderModal.className = "catalogo-admin-modal";
+  orderModal.hidden = true;
+  orderModal.innerHTML = `
+    <div class="catalogo-admin-dialog" role="dialog" aria-modal="true" aria-labelledby="catalogo-order-title" style="max-width:480px;">
+      <button type="button" class="modal-close" id="catalogo-order-close" aria-label="Cerrar">&times;</button>
+      <p class="eyebrow">Catálogo</p>
+      <h2 id="catalogo-order-title">Ordenar categorías</h2>
+      <p class="catalogo-admin-hint" style="margin-top:-8px;">Así se van a mostrar las filas del catálogo para tus clientes, de arriba hacia abajo.</p>
+      <div id="catalogo-order-list" style="display:grid;gap:8px;margin:16px 0;"></div>
+      <div class="catalogo-admin-actions">
+        <button type="button" class="btn-primary" id="catalogo-order-save">Guardar orden</button>
+        <button type="button" class="btn-secondary" id="catalogo-order-cancel">Cancelar</button>
+      </div>
+      <p class="admin-error" id="catalogo-order-message" role="status" hidden></p>
+    </div>
+  `;
+  document.body.appendChild(orderModal);
+
+  const orderList = orderModal.querySelector("#catalogo-order-list");
+  const orderMessage = orderModal.querySelector("#catalogo-order-message");
+  let ordenActual = [];
+
+  function etiquetaCategoria(key) {
+    return CATEGORIA_LABELS[key] || key.replace(/_/g, " ");
+  }
+
+  function obtenerOrdenActual() {
+    const categoriasExistentes = obtenerCategorias();
+    const base = (Array.isArray(CATEGORY_ORDER_REMOTE) && CATEGORY_ORDER_REMOTE.length) ? CATEGORY_ORDER_REMOTE.slice() : [];
+    categoriasExistentes.forEach((cat) => { if (!base.includes(cat)) base.push(cat); });
+    return base.filter((cat) => categoriasExistentes.includes(cat));
+  }
+
+  function renderOrderList() {
+    orderList.innerHTML = ordenActual.map((cat, index) => `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border:1px solid var(--color-line);border-radius:10px;background:var(--color-bg);">
+        <span style="font-weight:600;color:var(--color-wine-dark);">${etiquetaCategoria(cat)}</span>
+        <span style="display:flex;gap:6px;">
+          <button type="button" class="btn-secondary" data-order-action="up" data-index="${index}" style="width:auto;margin:0;padding:6px 10px;" ${index === 0 ? "disabled" : ""} aria-label="Subir">▲</button>
+          <button type="button" class="btn-secondary" data-order-action="down" data-index="${index}" style="width:auto;margin:0;padding:6px 10px;" ${index === ordenActual.length - 1 ? "disabled" : ""} aria-label="Bajar">▼</button>
+        </span>
+      </div>
+    `).join("");
+  }
+
+  orderList.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-order-action]");
+    if (!button) return;
+    const index = Number(button.dataset.index);
+    const targetIndex = index + (button.dataset.orderAction === "up" ? -1 : 1);
+    if (targetIndex < 0 || targetIndex >= ordenActual.length) return;
+    [ordenActual[index], ordenActual[targetIndex]] = [ordenActual[targetIndex], ordenActual[index]];
+    renderOrderList();
+  });
+
+  function openOrderModal() {
+    ordenActual = obtenerOrdenActual();
+    orderMessage.hidden = true;
+    renderOrderList();
+    orderModal.hidden = false;
+  }
+
+  function closeOrderModal() {
+    orderModal.hidden = true;
+  }
+
+  orderModal.querySelector("#catalogo-order-close").addEventListener("click", closeOrderModal);
+  orderModal.querySelector("#catalogo-order-cancel").addEventListener("click", closeOrderModal);
+  orderModal.addEventListener("click", (event) => {
+    if (event.target === orderModal) closeOrderModal();
+  });
+
+  orderModal.querySelector("#catalogo-order-save").addEventListener("click", async () => {
+    const saveBtn = orderModal.querySelector("#catalogo-order-save");
+    saveBtn.disabled = true;
+    saveBtn.textContent = "Guardando...";
+    const resultado = await guardarOrdenCategoriasRemoto(ordenActual, sessionStorage.getItem(ADMIN_TOKEN_SESSION_KEY));
+    saveBtn.disabled = false;
+    saveBtn.textContent = "Guardar orden";
+    if (!resultado.ok) {
+      orderMessage.textContent = resultado.error || "No se pudo guardar el orden.";
+      orderMessage.hidden = false;
+      return;
+    }
+    window.dispatchEvent(new Event("catalogo:render"));
+    closeOrderModal();
+  });
+
+  editor.querySelector("#catalogo-admin-order").addEventListener("click", openOrderModal);
 })();

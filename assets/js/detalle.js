@@ -161,7 +161,7 @@ function pintarLightbox() {
   const previous = lightbox.querySelector(".image-lightbox__nav--prev");
   const next = lightbox.querySelector(".image-lightbox__nav--next");
 
-  image.src = photo.src;
+  image.src = cloudinaryUrl(photo.src, 1000);
   image.alt = photo.alt;
   counter.textContent = `${GALLERY_INDEX + 1} / ${GALLERY_PHOTOS.length}`;
   previous.hidden = GALLERY_PHOTOS.length < 2;
@@ -231,7 +231,7 @@ function seleccionarFoto(index) {
 
   hero.classList.add("is-changing");
   window.setTimeout(() => {
-    hero.src = GALLERY_PHOTOS[index].src;
+    hero.src = cloudinaryUrl(GALLERY_PHOTOS[index].src, 800);
     hero.alt = GALLERY_PHOTOS[index].alt;
     hero.classList.remove("is-changing");
   }, 160);
@@ -248,20 +248,20 @@ function renderGaleria(fotos, nombreAlt) {
   const remaining = Math.max(0, GALLERY_PHOTOS.length - 5);
   const bento = secondary.map((photo, index) => `
     <button type="button" class="gallery-bento-item" data-gallery-index="${index + 1}" aria-label="Ampliar foto ${index + 2}">
-      <img src="${photo.src}" alt="${photo.alt}" width="1200" height="1600" loading="lazy" decoding="async">
+      <img src="${cloudinaryUrl(photo.src, 500)}" alt="${photo.alt}" width="1200" height="1600" loading="lazy" decoding="async">
       ${index === secondary.length - 1 && remaining ? `<span class="gallery-bento-more">+${remaining}</span>` : ""}
     </button>
   `).join("");
   const filmstrip = GALLERY_PHOTOS.map((photo, index) => `
     <button type="button" class="gallery-thumb${index === 0 ? " is-active" : ""}" data-gallery-index="${index}" aria-label="Ver foto ${index + 1}">
-      <img src="${photo.src}" alt="${photo.alt}" width="1200" height="1600" loading="lazy" decoding="async">
+      <img src="${cloudinaryUrl(photo.src, 150)}" alt="${photo.alt}" width="1200" height="1600" loading="lazy" decoding="async">
     </button>
   `).join("");
 
   return `
     <div class="detail-model-gallery" data-count="${secondary.length}">
       <button type="button" class="detail-gallery-hero" data-gallery-index="0" aria-label="Ampliar foto principal">
-        <img src="${hero.src}" alt="${hero.alt}" width="1200" height="1600" decoding="async">
+        <img src="${cloudinaryUrl(hero.src, 800)}" alt="${hero.alt}" width="1200" height="1600" decoding="async">
         <span class="gallery-zoom-hint">Ampliar ✦</span>
         ${GALLERY_PHOTOS.length > 1 ? `<span class="gallery-counter">1 / ${GALLERY_PHOTOS.length}</span>` : ""}
       </button>
@@ -348,7 +348,7 @@ const CATEGORY_LABELS = {
 
 function mostrarFoto(src, alt) {
   if (!mainImage) return;
-  mainImage.src = src;
+  mainImage.src = cloudinaryUrl(src, 800);
   mainImage.alt = alt;
 
   if (thumbs) {
@@ -375,7 +375,7 @@ function renderThumbs(fotos) {
       data-src="${src}"
       aria-label="Ver foto ${index + 1} del diseño"
     >
-      <img src="${src}" alt="Detalle del diseño ${index + 1}" width="1200" height="1600" loading="lazy" decoding="async">
+      <img src="${cloudinaryUrl(src, 150)}" alt="Detalle del diseño ${index + 1}" width="1200" height="1600" loading="lazy" decoding="async">
     </button>
   `).join("");
 
