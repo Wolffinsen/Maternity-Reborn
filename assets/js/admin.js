@@ -135,6 +135,16 @@
       .join("") || "V";
   }
 
+  // Comisión fija por venta: muestra centavos solo si los tiene (ej. $500 o $499.50).
+  function formatCommission(value) {
+    return new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(Number(value) || 0);
+  }
+
   function renderReferralList() {
     const search = referralSearchInput.value.trim().toLowerCase();
     const sellers = Object.entries(ReferralTracking.getSellerRegistry()).filter(([code, seller]) =>
@@ -154,7 +164,7 @@
       <article class="referral-card">
         <div class="referral-card-top">
           <span class="referral-avatar">${escapeHtml(getSellerInitials(seller.name))}</span>
-          <span class="referral-commission">${escapeHtml(seller.commissionPercent)}% comisión</span>
+          <span class="referral-commission">${escapeHtml(formatCommission(seller.commissionAmount))} por venta</span>
         </div>
         <div class="referral-card-info">
           <span class="referral-seller-name">${escapeHtml(seller.name)}</span>
@@ -208,7 +218,7 @@
         editingReferralCode = button.dataset.referralCode;
         referralCodeInput.value = editingReferralCode;
         referralNameInput.value = seller.name || "";
-        referralCommissionInput.value = seller.commissionPercent ?? "";
+        referralCommissionInput.value = seller.commissionAmount ?? "";
         referralSubmit.textContent = "Actualizar vendedor";
         referralCancel.hidden = false;
         referralModalTitle.textContent = "Editar vendedor";
@@ -566,7 +576,7 @@
     const result = ReferralTracking.saveSeller({
       code: referralCodeInput.value,
       name: referralNameInput.value,
-      commissionPercent: referralCommissionInput.value,
+      commissionAmount: referralCommissionInput.value,
       previousCode: editingReferralCode
     });
     if (!result.ok) {

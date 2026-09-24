@@ -3,10 +3,10 @@
  *
  * Agrega códigos a SELLER_REFERRAL_CODES cuando necesites una configuración fija:
  * {
- *   SELLER_CODE: { name: "Seller name", commissionPercent: 10 }
+ *   SELLER_CODE: { name: "Seller name", commissionAmount: 100 }
  * }
- * El código es la clave; el nombre y el porcentaje son datos para un futuro
- * backend o panel y no sustituyen la confirmación de una venta.
+ * El código es la clave; el nombre y el monto de comisión (precio fijo por venta)
+ * son datos para un futuro backend o panel y no sustituyen la confirmación de una venta.
  */
 (function (window) {
   "use strict";
@@ -17,10 +17,10 @@
   const REFERRAL_CODE_PATTERN = /^[A-Z0-9_-]{2,64}$/;
   let remoteRegistry = {};
 
-  // TODO: Agrega aquí códigos, nombres y porcentajes si deseas una configuración fija.
+  // TODO: Agrega aquí códigos, nombres y montos si deseas una configuración fija.
   // TODO: Migra este registro a la API/base de datos al confirmar ventas.
   const SELLER_REFERRAL_CODES = {
-    // SELLER_CODE: { name: "Seller name", commissionPercent: 10 }
+    // SELLER_CODE: { name: "Seller name", commissionAmount: 100 }
   };
 
   function normalizarCodigo(value) {
@@ -36,18 +36,32 @@
       .replace(/^-+|-+$/g, "");
   }
 
-    function leerRegistro() {
-      try {
-        const guardado = JSON.parse(window.localStorage.getItem(SELLER_REGISTRY_STORAGE_KEY) || "null");
-        return guardado && typeof guardado === "object" && !Array.isArray(guardado) ? guardado : {};
-      } catch (error) {
-        return {};
-      }
-    }
+  // Deja cada vendedor con la forma { name, commissionAmount }.
+  // Los registros viejos que traían commissionPercent quedan con monto 0
+  // (no se puede convertir un porcentaje a precio fijo sin conocer el precio de venta).
+  function normalizarVendedor(data) {
+    const amount = Number(data && data.commissionAmount);
+    return {
+      name: String((data && data.name) || ""),
+      commissionAmount: Number.isFinite(amount) && amount >= 0 ? amount : 0
+    };
+  }
 
-    function obtenerRegistroCompleto() {
-      return { ...SELLER_REFERRAL_CODES, ...remoteRegistry, ...leerRegistro() };
+  function leerRegistro() {
+    try {
+      const guardado = JSON.parse(window.localStorage.getItem(SELLER_REGISTRY_STORAGE_KEY) || "null");
+      return guardado && typeof guardado === "object" && !Array.isArray(guardado) ? guardado : {};
+    } catch (error) {
+      return {};
     }
+  }
+
+  function obtenerRegistroCompleto() {
+    const combinado = { ...SELLER_REFERRAL_CODES, ...remoteRegistry, ...leerRegistro() };
+    return Object.fromEntries(
+      Object.entries(combinado).map(([code, data]) => [code, normalizarVendedor(data)])
+    );
+  }
 
   function codigoValido(value) {
     const code = normalizarCodigo(value);
@@ -128,21 +142,23 @@
     const seller = obtenerRegistroCompleto()[code];
     return {
       code,
-      sellerName: seller?.name || ""
+      sellerName: seller?.name || "",
+      commissionAmount: seller?.commissionAmount ?? 0
     };
   }
 
-  function guardarVendedor({ code, name, commissionPercent, previousCode = "" }) {
+  function guardarVendedor({ code, name, commissionAmount, previousCode = "" }) {
     const normalizedCode = normalizarCodigo(code);
     const normalizedPreviousCode = normalizarCodigo(previousCode);
     const normalizedName = String(name || "").trim();
-    const percentage = Number(commissionPercent);
+    const amount = Number(commissionAmount);
     if (!REFERRAL_CODE_PATTERN.test(normalizedCode)) {
       return { ok: false, error: "El código debe tener entre 2 y 64 caracteres alfanuméricos." };
     }
     if (!normalizedName) return { ok: false, error: "Escribe el nombre del vendedor." };
-    if (!Number.isFinite(percentage) || percentage < 0 || percentage > 100) {
-      return { ok: false, error: "El porcentaje debe estar entre 0 y 100." };
+    if (commissionAmount === "" || commissionAmount === null || commissionAmount === undefined
+      || !Number.isFinite(amount) || amount < 0) {
+      return { ok: false, error: "Escribe un monto de comisión válido (0 o mayor)." };
     }
 
     const registry = obtenerRegistroCompleto();
@@ -152,7 +168,7 @@
     if (normalizedPreviousCode && normalizedPreviousCode !== normalizedCode) {
       delete registry[normalizedPreviousCode];
     }
-    registry[normalizedCode] = { name: normalizedName, commissionPercent: percentage };
+    registry[normalizedCode] = { name: normalizedName, commissionAmount: amount };
     try {
       window.localStorage.setItem(SELLER_REGISTRY_STORAGE_KEY, JSON.stringify(registry));
       return { ok: true, code: normalizedCode };
