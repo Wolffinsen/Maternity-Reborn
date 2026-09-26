@@ -134,7 +134,7 @@ cargarCatalogoGuardado();
 // TODO: Configure the business WhatsApp number here before publishing.
 const NUMERO_WHATSAPP = "5214423807369";
 const COSTO_APARTADO = 200;
-const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbx4Co4exT4tpgXTpTzRWPRHz-GE8ON4FGYkDmwLizof4Ik7I399kfvs-1l-VlumZle-/exec";
+const URL_APPS_SCRIPT = "https://script.google.com/macros/s/AKfycbzrDFjRi0O86tdkIWwUGqn5k9KNKxjWQ934w9ta-K0blFBr_S5-LfDLZVd6sl2l5PBn/exec";
 const CATALOGO_READY = cargarCatalogoRemoto();
 
 let CATEGORY_ORDER_REMOTE = [];

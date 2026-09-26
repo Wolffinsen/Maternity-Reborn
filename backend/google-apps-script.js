@@ -18,8 +18,13 @@
  * Encabezados recomendados:
  * Fecha | Folio | Cliente | Telefono | Diseno | Codigo | Precio | Estado | Es referencia | Codigo referencia | Vendedor referencia | Imagen
  *
- * Para llenar las fotos de las ventas que ya existían, ejecuta una sola vez
- * la función rellenarFotosVentas desde el editor de Apps Script.
+ * Estados válidos de un folio: apartado | confirmado | en_proceso | entregado
+ * (los valores antiguos "activo" y "vendido" se siguen leyendo correctamente,
+ * se migran automáticamente a "apartado" y "entregado" respectivamente).
+ *
+ * Para llenar las fotos y códigos de las ventas que ya existían, ejecuta una
+ * sola vez la función rellenarFotosVentas desde el editor de Apps Script.
+ * Las ventas nuevas se corrigen solas cada vez que se abre el panel.
  */
 
 const SALES_SHEET_NAME = "Ventas";
@@ -33,6 +38,7 @@ const REFERRAL_REGISTRY_PROPERTY = "REFERRAL_REGISTRY";
 const CATEGORY_ORDER_PROPERTY = "CATEGORY_ORDER";
 const SALES_IMAGE_ROW_HEIGHT = 90;
 const SALES_IMAGE_COLUMN_WIDTH = 90;
+const SALE_STATUSES = ["apartado", "confirmado", "en_proceso", "entregado"];
 
 function doPost(event) {
   try {
@@ -80,6 +86,14 @@ function doPost(event) {
 
     if (payload.action === "updateSaleStatus") {
       return updateSaleStatus(payload);
+    }
+
+    if (payload.action === "deleteSales") {
+      return deleteSales(payload);
+    }
+
+    if (payload.action === "adminCreateSale") {
+      return adminCreateSale(payload);
     }
 
     if (payload.action === "createReservation") {
@@ -337,7 +351,7 @@ function createReservation(payload) {
         case "diseno": return diseno;
         case "codigo": return codigo;
         case "precio": return precio;
-        case "estado": return "activo";
+        case "estado": return "apartado";
         case "esreferencia": return referralSeller ? "Sí" : "No";
         case "codigoreferencia": return referralSeller ? referralCode : "";
         case "vendedorreferencia": return referralSeller;
@@ -361,7 +375,112 @@ function createReservation(payload) {
   }
 }
 
-/* ---------- Imágenes de producto ---------- */
+// Crear un folio manualmente desde el panel de administrador, eligiendo el
+// bebé del catálogo. A diferencia de createReservation, el teléfono es
+// opcional y se puede elegir directamente el estado inicial del folio.
+function adminCreateSale(payload) {
+  if (!isAdminSessionValid(payload.sessionToken)) {
+    return jsonResponse({ ok: false, error: "No autorizado" });
+  }
+
+  const nombreCliente = String(payload.nombreCliente || "").trim();
+  const telefonoCliente = String(payload.telefonoCliente || "").trim();
+  const diseno = String(payload.diseno || "").trim();
+  const codigo = String(payload.codigo || "").trim();
+  const precio = Number(payload.precio);
+  const estado = SALE_STATUSES.indexOf(String(payload.estado || "")) >= 0
+    ? String(payload.estado)
+    : "apartado";
+
+  if (!nombreCliente || !diseno || !Number.isFinite(precio) || precio <= 0) {
+    return jsonResponse({ ok: false, error: "Completa el cliente, el bebé y un precio válido." });
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const sheet = getSalesSheet();
+    const headers = ensureHeaders(sheet);
+    const folio = createFolio(sheet, headers);
+    const referralCode = String(payload.referralCode || "").trim().toUpperCase();
+    const referralRegistry = readReferralCodes();
+    const referralSeller = referralCode && referralRegistry[referralCode]
+      ? String(referralRegistry[referralCode].name || "").trim()
+      : "";
+    const imagenUrl = toAbsoluteImageUrl(resolveProductImage(payload.imagen, codigo, diseno));
+    const now = new Date();
+    const row = headers.map(function (header) {
+      switch (normalizeHeader(header)) {
+        case "fecha": return now;
+        case "folio": return folio;
+        case "cliente": return nombreCliente;
+        case "telefono": return telefonoCliente;
+        case "diseno": return diseno;
+        case "codigo": return codigo;
+        case "precio": return precio;
+        case "estado": return estado;
+        case "esreferencia": return referralSeller ? "Sí" : "No";
+        case "codigoreferencia": return referralSeller ? referralCode : "";
+        case "vendedorreferencia": return referralSeller;
+        default: return "";
+      }
+    });
+
+    sheet.appendRow(row);
+    if (imagenUrl) {
+      writeSaleImage(sheet, headers, sheet.getLastRow(), imagenUrl);
+    }
+
+    return jsonResponse({ ok: true, action: "adminCreateSale", folio: folio });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Borra uno o varios folios de la hoja "Ventas" a partir de su folio.
+function deleteSales(payload) {
+  if (!isAdminSessionValid(payload.sessionToken)) {
+    return jsonResponse({ ok: false, error: "No autorizado" });
+  }
+
+  const folios = Array.isArray(payload.folios) ? payload.folios.map(String).filter(Boolean) : [];
+  if (!folios.length) {
+    return jsonResponse({ ok: false, error: "No se especificaron folios para eliminar." });
+  }
+
+  const lock = LockService.getScriptLock();
+  lock.waitLock(10000);
+
+  try {
+    const sheet = getSalesSheet();
+    const values = sheet.getDataRange().getValues();
+    const headers = values[0] || [];
+    const folioIndex = headers.findIndex(function (header) {
+      return normalizeHeader(header) === "folio";
+    });
+    if (folioIndex < 0) {
+      return jsonResponse({ ok: false, error: "No se encontró la columna Folio." });
+    }
+
+    const folioSet = new Set(folios);
+    const rowsToDelete = [];
+    values.forEach(function (row, index) {
+      if (index === 0) return; // encabezados
+      if (folioSet.has(String(row[folioIndex]))) rowsToDelete.push(index + 1); // fila real en la hoja
+    });
+
+    rowsToDelete
+      .sort(function (a, b) { return b - a; }) // de abajo hacia arriba para no desfasar índices
+      .forEach(function (rowNumber) { sheet.deleteRow(rowNumber); });
+
+    return jsonResponse({ ok: true, action: "deleteSales", deleted: rowsToDelete.length });
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+/* ---------- Imágenes y código de producto ---------- */
 
 function getSiteUrl() {
   return String(PropertiesService.getScriptProperties().getProperty("SITE_URL") || "")
@@ -390,7 +509,7 @@ function extractImageUrl(formula) {
   return match ? match[1] : "";
 }
 
-function findCatalogImage(catalogRows, codigo, diseno) {
+function findCatalogProduct(catalogRows, codigo, diseno) {
   const code = normalizeHeader(codigo);
   const name = normalizeHeader(diseno);
   let product = code
@@ -399,6 +518,11 @@ function findCatalogImage(catalogRows, codigo, diseno) {
   if (!product && name) {
     product = catalogRows.find(function (item) { return normalizeHeader(item.nombre) === name; });
   }
+  return product || null;
+}
+
+function findCatalogImage(catalogRows, codigo, diseno) {
+  const product = findCatalogProduct(catalogRows, codigo, diseno);
   if (!product) return "";
   return String(product.imagen || (product.fotos && product.fotos[0]) || "").trim();
 }
@@ -430,14 +554,17 @@ function writeSaleImage(sheet, headers, rowNumber, imageUrl) {
 }
 
 // Ejecuta esta función UNA VEZ desde el editor de Apps Script para
-// agregar la foto a las ventas que ya estaban registradas.
+// agregar la foto y el código a las ventas que ya estaban registradas
+// (por ejemplo, reservas hechas desde un celular con caché vieja).
 function rellenarFotosVentas() {
   const sheet = getSalesSheet();
   const headers = ensureHeaders(sheet);
   if (sheet.getLastRow() < 2) return 0;
 
-  const imagenIndex = headers.findIndex(function (header) {
-    return normalizeHeader(header) === "imagen";
+  const imagenIndex = headers.findIndex(function (header) { return normalizeHeader(header) === "imagen"; });
+  const codigoIndex = headers.findIndex(function (header) { return normalizeHeader(header) === "codigo"; });
+  const disenoIndex = headers.findIndex(function (header) {
+    return ["diseno", "diseño", "producto"].indexOf(normalizeHeader(header)) >= 0;
   });
   const range = sheet.getRange(2, 1, sheet.getLastRow() - 1, headers.length);
   const values = range.getValues();
@@ -446,18 +573,29 @@ function rellenarFotosVentas() {
   let updated = 0;
 
   values.forEach(function (row, index) {
-    if (formulas[index][imagenIndex] || row[imagenIndex]) return;
-    const imageUrl = toAbsoluteImageUrl(findCatalogImage(
-      catalogRows,
-      getCell(row, headers, ["codigo"]),
-      getCell(row, headers, ["diseno", "producto"])
-    ));
-    if (!imageUrl) return;
-    writeSaleImage(sheet, headers, index + 2, imageUrl);
-    updated += 1;
+    const rowNumber = index + 2;
+    const diseno = disenoIndex >= 0 ? row[disenoIndex] : "";
+    let codigo = codigoIndex >= 0 ? row[codigoIndex] : "";
+
+    if (codigoIndex >= 0 && !codigo && diseno) {
+      const product = findCatalogProduct(catalogRows, "", diseno);
+      if (product && product.codigo) {
+        codigo = product.codigo;
+        sheet.getRange(rowNumber, codigoIndex + 1).setValue(codigo);
+        updated += 1;
+      }
+    }
+
+    if (!formulas[index][imagenIndex] && !row[imagenIndex]) {
+      const imageUrl = toAbsoluteImageUrl(findCatalogImage(catalogRows, codigo, diseno));
+      if (imageUrl) {
+        writeSaleImage(sheet, headers, rowNumber, imageUrl);
+        updated += 1;
+      }
+    }
   });
 
-  Logger.log("Fotos agregadas: " + updated);
+  Logger.log("Filas corregidas: " + updated);
   return updated;
 }
 
@@ -471,17 +609,30 @@ function readSalesRows() {
 
   const formulas = range.getFormulas();
   const headers = values[0];
-  const imagenIndex = headers.findIndex(function (header) {
-    return normalizeHeader(header) === "imagen";
-  });
+  const imagenIndex = headers.findIndex(function (header) { return normalizeHeader(header) === "imagen"; });
+  const codigoIndex = headers.findIndex(function (header) { return normalizeHeader(header) === "codigo"; });
   let catalogRows = null;
+  const pendingCodeFixes = []; // { rowNumber, codigo }
 
-  return values.slice(1)
+  const rows = values.slice(1)
     .map(function (row, index) {
-      const codigo = getCell(row, headers, ["codigo"]);
+      const rowNumber = index + 2;
       const diseno = getCell(row, headers, ["diseno", "diseño", "producto"]);
+      let codigo = getCell(row, headers, ["codigo"]);
 
-      // 1) foto guardada en la hoja, 2) si no hay, la del catálogo.
+      // El dispositivo del cliente a veces no manda el código del bebé
+      // (caché vieja). Si falta, lo buscamos en el catálogo por nombre
+      // y lo dejamos guardado en la hoja para que ya no falte después.
+      if (!codigo && diseno) {
+        if (catalogRows === null) catalogRows = readCatalogRowsSafe();
+        const product = findCatalogProduct(catalogRows, "", diseno);
+        if (product && product.codigo) {
+          codigo = product.codigo;
+          if (codigoIndex >= 0) pendingCodeFixes.push({ rowNumber: rowNumber, codigo: codigo });
+        }
+      }
+
+      // 1) foto ya guardada en la hoja, 2) si no hay, la del catálogo.
       let imagen = "";
       if (imagenIndex >= 0) {
         imagen = extractImageUrl(formulas[index + 1][imagenIndex]) || String(row[imagenIndex] || "").trim();
@@ -492,7 +643,7 @@ function readSalesRows() {
       }
 
       return {
-        rowNumber: index + 2,
+        rowNumber: rowNumber,
         folio: getCell(row, headers, ["folio"]),
         cliente: getCell(row, headers, ["cliente", "nombrecliente", "nombredelcliente", "nombre", "name"]),
         diseno: diseno,
@@ -508,11 +659,17 @@ function readSalesRows() {
     })
     .filter(function (row) {
       return row.folio || row.cliente || row.diseno || row.precio || row.fecha;
-    })
-    .sort(function (first, second) {
-      const dateOrder = String(second.fecha).localeCompare(String(first.fecha));
-      return dateOrder || second.rowNumber - first.rowNumber;
     });
+
+  // Persistimos en la hoja los códigos que se pudieron deducir del catálogo.
+  pendingCodeFixes.forEach(function (fix) {
+    sheet.getRange(fix.rowNumber, codigoIndex + 1).setValue(fix.codigo);
+  });
+
+  return rows.sort(function (first, second) {
+    const dateOrder = String(second.fecha).localeCompare(String(first.fecha));
+    return dateOrder || second.rowNumber - first.rowNumber;
+  });
 }
 
 function updateSaleStatus(payload) {
@@ -520,8 +677,8 @@ function updateSaleStatus(payload) {
     return jsonResponse({ ok: false, error: "No autorizado" });
   }
 
-  const estado = normalizeStatus(payload.estado);
-  if (!payload.folio || ["activo", "vendido"].indexOf(estado) < 0) {
+  const estado = String(payload.estado || "");
+  if (!payload.folio || SALE_STATUSES.indexOf(estado) < 0) {
     return jsonResponse({ ok: false, error: "Datos de estado inválidos" });
   }
 
@@ -715,8 +872,30 @@ function normalizeHeader(value) {
 
 function normalizeStatus(value) {
   const status = normalizeHeader(value);
-  if (["vendido", "pagado", "completado", "entregado"].indexOf(status) >= 0) return "vendido";
-  return "activo";
+  const map = {
+    // Apartado (folio recién creado, sin confirmar)
+    apartado: "apartado",
+    activo: "apartado",
+    pendiente: "apartado",
+    reservado: "apartado",
+    // Confirmado (el cliente ya confirmó / dio anticipo)
+    confirmado: "confirmado",
+    confirmada: "confirmado",
+    anticipo: "confirmado",
+    pagoconfirmado: "confirmado",
+    // En proceso (en producción / preparación)
+    enproceso: "en_proceso",
+    proceso: "en_proceso",
+    produccion: "en_proceso",
+    fabricacion: "en_proceso",
+    // Entregado (venta completada)
+    entregado: "entregado",
+    entregada: "entregado",
+    vendido: "entregado",
+    completado: "entregado",
+    finalizado: "entregado"
+  };
+  return map[status] || "apartado";
 }
 
 function formatDate(value) {
